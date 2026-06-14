@@ -89,7 +89,8 @@ function LoginGate({onLogin}){
     else{setErro(true);setTimeout(()=>setErro(false),1500);}
   }
   return(
-    <div style={{minHeight:"100vh",background:C.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:MONO}}>
+    <div style={{minHeight:"100vh",background:"#000",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:MONO}}>
+      <style>{CSS}</style>
       <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:16,padding:"40px 36px",width:320,textAlign:"center"}}>
         <div style={{fontSize:14,fontWeight:700,color:C.white,letterSpacing:"0.05em",marginBottom:4}}>GERADOR DE CARROSSEL</div>
         <div style={{fontSize:11,color:C.dim,marginBottom:28}}>Cassiano Galvão</div>
@@ -283,7 +284,7 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
   const slide=slides[idx];
 
   return(
-    <div style={St.root}>
+    <div style={{...St.root,background:"#000"}}>
       <style>{CSS}</style>
       <header style={St.header}>
         <div><div style={St.brand}>GERADOR DE CARROSSEL</div><div style={St.brandSub}>{NOME}</div></div>
@@ -880,7 +881,9 @@ const TW={
 const CSS=`
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body,#root{background:#000;min-height:100%;}
+html{background:#000;overflow-x:hidden;}
+body{background:#000;margin:0;padding:0;overflow-x:hidden;}
+#root{background:#000;min-height:100vh;}
 button:disabled{opacity:0.45;cursor:not-allowed;}
 select{appearance:none;}
 input[type=range]{height:4px;}
