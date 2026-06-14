@@ -145,7 +145,7 @@ export default function App(){
       const out=await askClaude(`${ctx()}\n${HOOK_CAPA}\n${objInstr}\nTAREFA: carrossel completo sobre: Título "${ideia.titulo}" | Ângulo "${ideia.angulo}".\n1 CAPA + 4-5 CONTEÚDO + 1 CTA. Cada slide: "tipo"(capa|conteudo|cta),"titulo","destaque"(palavra do título),"corpo"(1-2 frases ou ""),"punchline"(frase memorável ou "").\nAPENAS JSON: {"isca":"","slides":[{"tipo":"capa","titulo":"","destaque":"","corpo":"","punchline":""}]}`);
       const d=parseJSON(out);
       const obj=Array.isArray(d)?{isca:"",slides:d}:d;
-      const arr=(obj.slides||[]).map(s=>({...s,bgImage:null,imgPos:"top",imgOffsetY:0,coverLayout:capaPadrao,image_prompt:""}));
+      const arr=(obj.slides||[]).map(s=>({...s,bgImage:null,imgMode:"foto",imgPos:"top",imgOffsetY:0,coverLayout:capaPadrao,image_prompt:""}));
       setIsca(obj.isca||"");setSlides(arr);
     }catch(e){setErro(e.message);}finally{setCarregando("");}
   }
@@ -377,7 +377,13 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
             <div style={St.slideTools}>
               <label style={St.uploadBtn}>{slide.bgImage?"trocar img":"+ imagem"}<input type="file" accept="image/*" style={{display:"none"}} onChange={e=>onUpload(e,"slide")}/></label>
               {slide.bgImage&&<button style={St.removeImg} onClick={()=>setSlideField("bgImage",null)}>remover</button>}
-              {slide.bgImage&&slide.tipo!=="capa"&&[["top","cima"],["bottom","baixo"],["bg","fundo"]].map(([k,l])=>(
+              {slide.bgImage&&(
+                <button onClick={()=>setSlideField("imgMode",slide.imgMode==="ilustracao"?"foto":"ilustracao")}
+                  style={{...St.posBtn,color:slide.imgMode==="ilustracao"?C.green:C.white,borderColor:slide.imgMode==="ilustracao"?C.green:C.line}}>
+                  {slide.imgMode==="ilustracao"?"ilustracao ativo":"modo foto"}
+                </button>
+              )}
+              {slide.bgImage&&slide.tipo!=="capa"&&slide.imgMode!=="ilustracao"&&[["top","cima"],["bottom","baixo"],["bg","fundo"]].map(([k,l])=>(
                 <button key={k} onClick={()=>setSlideField("imgPos",k)} style={{...St.posBtn,background:slide.imgPos===k?C.green:"transparent",color:slide.imgPos===k?C.black:C.white}}>{l}</button>
               ))}
               {slide.bgImage&&(
@@ -459,7 +465,12 @@ function Foot({light,accent,label}){
 function PunchEl({txt,accent,light}){
   return<div style={{borderLeft:`3px solid ${accent}`,paddingLeft:11,fontSize:14,fontWeight:700,lineHeight:1.4,color:light?C.black:C.white,marginBottom:12,textWrap:"pretty"}}>{widow(txt)}</div>;
 }
-function BandEl({src,h,offsetY}){
+function BandEl({src,h,offsetY,mode}){
+  if(mode==="ilustracao") return(
+    <div style={{display:"flex",justifyContent:"center",height:h||120,flexShrink:0}}>
+      <img src={src} alt="" style={{height:"100%",width:"auto",objectFit:"contain",filter:"drop-shadow(0 4px 16px rgba(0,0,0,0.5))"}}/>
+    </div>
+  );
   return<div style={{borderRadius:9,overflow:"hidden",height:h||90,flexShrink:0}}>
     <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:`center ${50+(offsetY||0)}%`}}/>
   </div>;
@@ -505,7 +516,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
     <div style={cardBase(light)}>
       {!light&&<Glows/>}
       <div style={{...padCol,justifyContent:"space-between"}}>
-        {img&&<BandEl src={img} h={150} offsetY={off}/>}
+        {img&&<BandEl src={img} h={150} offsetY={off} mode={slide.imgMode||"foto"}/>}
         <div style={{display:"flex",flexDirection:"column",gap:10,flex:1,justifyContent:"center",paddingTop:img?12:0}}>
           {titleEl}
           {slide.corpo&&<div style={{fontSize:16,color:light?"rgba(0,0,0,.6)":"rgba(255,255,255,.7)"}}>{widow(slide.corpo)}</div>}
@@ -522,7 +533,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
           {titleEl}
           {slide.corpo&&<div style={{fontSize:16,color:light?"rgba(0,0,0,.6)":"rgba(255,255,255,.7)"}}>{widow(slide.corpo)}</div>}
         </div>
-        {img&&<><BandEl src={img} h={150} offsetY={off}/><div style={{height:8}}/></>}
+        {img&&<><BandEl src={img} h={150} offsetY={off} mode={slide.imgMode||"foto"}/><div style={{height:8}}/></>}
         {footEl}
       </div>
     </div>
@@ -580,7 +591,7 @@ function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,o
           ?<div style={{marginTop:12,fontSize:16,lineHeight:1.5,color:cc,textWrap:"pretty"}}>{widow(slide.corpo)}</div>
           :!hasContent&&<div style={{flex:1}}/>
         }
-        {hasImg&&pos==="bottom"&&<div style={{marginTop:12}}><BandEl src={img} h={90} offsetY={off}/></div>}
+        {hasImg&&pos==="bottom"&&<div style={{marginTop:12}}><BandEl src={img} h={slide.imgMode==="ilustracao"?130:90} offsetY={off} mode={slide.imgMode||"foto"}/></div>}
         <div style={{flex:1}}/>
         {slide.punchline&&<PunchEl txt={slide.punchline} accent={accent} light={light}/>}
         <Foot light={light} accent={accent} label={pg(idx,total)}/>
@@ -638,19 +649,78 @@ async function renderSlideToPNG(slide,i,total,estilo,perfil){
     try{await Promise.all([document.fonts.load(`700 ${20*k}px 'IBM Plex Mono'`),document.fonts.load(`italic 700 ${20*k}px 'IBM Plex Mono'`)]);}catch(_){}
     // title
     const parts=splitTitulo(slide.titulo,slide.destaque);
-    const titleSize=slide.tipo==="capa"?28*k:20*k;
-    const titleColor=(img&&slide.tipo==="capa")?C.white:(light?C.black:C.white);
-    let y=slide.tipo==="capa"?H*0.52:pad+22*k;
-    const spW=ctx.measureText(" ").width;
-    ctx.textBaseline="top";
-    const words=[];parts.forEach(p=>{p.t.split(/\s+/).forEach(w=>{if(w)words.push({w,hi:p.hi});});});
-    const maxW=W-pad*2;
-    const lines=[];let cur=[],curW=0;
-    for(const tk of words){ctx.font=`italic 700 ${titleSize}px 'IBM Plex Mono',monospace`;const ww=ctx.measureText(tk.w).width;const add=(cur.length?spW:0)+ww;if(curW+add>maxW&&cur.length){lines.push(cur);cur=[tk];curW=ww;}else{cur.push(tk);curW+=add;}}
-    if(cur.length)lines.push(cur);
-    for(const ln of lines){let cx=pad;for(const tk of ln){ctx.font=tk.hi?`italic 700 ${titleSize}px 'IBM Plex Mono',monospace`:`700 ${titleSize}px 'IBM Plex Mono',monospace`;ctx.fillStyle=tk.hi?accent:titleColor;ctx.fillText(tk.w,cx,y);cx+=ctx.measureText(tk.w).width+spW;}y+=titleSize*1.15;}
-    if(slide.corpo){y+=8*k;ctx.font=`400 ${16*k}px 'IBM Plex Mono',monospace`;ctx.fillStyle=light?"rgba(0,0,0,.65)":"rgba(255,255,255,.74)";const bodyWords=slide.corpo.split(/\s+/);const bodyLines=[];let bl="";for(const w of bodyWords){const t=bl?bl+" "+w:w;if(ctx.measureText(t).width>maxW&&bl){bodyLines.push(bl);bl=w;}else bl=t;}if(bl)bodyLines.push(bl);for(const l of bodyLines){ctx.fillText(l,pad,y);y+=16*k*1.5;}}
-    if(slide.punchline){ctx.font=`700 ${14*k}px 'IBM Plex Mono',monospace`;ctx.fillStyle=accent;ctx.fillRect(pad,footY-40*k,3*k,32*k);ctx.fillStyle=light?C.black:C.white;ctx.fillText(slide.punchline.slice(0,60),pad+12*k,footY-38*k);}
+    const isCapa = slide.tipo==="capa";
+    const titleSize = isCapa ? Math.round(26*k) : Math.round(20*k);
+    const bodySize = Math.round(13*k);
+    const punchSize = Math.round(12*k);
+    const titleColor = (img && isCapa) ? C.white : (light ? C.black : C.white);
+    const bodyColor = light ? "rgba(0,0,0,.65)" : "rgba(255,255,255,.74)";
+    const maxW = W - pad*2;
+    let y = isCapa ? Math.round(H*0.54) : Math.round(pad + 20*k);
+
+    // draw title with word-wrap preserving spaces
+    function cvWordWrap(text, size, italic) {
+      ctx.font = `${italic?"italic ":""}700 ${size}px 'IBM Plex Mono',monospace`;
+      const sp = ctx.measureText(" ").width;
+      const ws = text.split(/\s+/).filter(Boolean);
+      const lines = []; let line = "", lineW = 0;
+      for (const w of ws) {
+        const ww = ctx.measureText(w).width;
+        const gap = line ? sp : 0;
+        if (lineW + gap + ww > maxW && line) { lines.push(line); line = w; lineW = ww; }
+        else { line = line ? line + " " + w : w; lineW += gap + ww; }
+      }
+      if (line) lines.push(line);
+      return lines;
+    }
+    function cvDrawWrapped(lines, x, startY, size, color, lhMult) {
+      const lh = Math.round(size * lhMult);
+      for (const l of lines) { ctx.fillStyle = color; ctx.fillText(l, x, startY); startY += lh; }
+      return startY;
+    }
+
+    ctx.textBaseline = "top";
+    // title - mixed hi/normal words
+    const titleParts = splitTitulo(slide.titulo, slide.destaque);
+    const allWords = [];
+    titleParts.forEach(p => { p.t.split(/\s+/).filter(Boolean).forEach(w => allWords.push({w, hi: p.hi})); });
+    // wrap by measuring
+    const spNorm = (() => { ctx.font = `700 ${titleSize}px 'IBM Plex Mono',monospace`; return ctx.measureText(" ").width; })();
+    const titleLines = []; let cur = [], curW = 0;
+    for (const tk of allWords) {
+      ctx.font = `${tk.hi?"italic ":""}700 ${titleSize}px 'IBM Plex Mono',monospace`;
+      const ww = ctx.measureText(tk.w).width;
+      const gap = cur.length ? spNorm : 0;
+      if (curW + gap + ww > maxW && cur.length) { titleLines.push(cur); cur = [tk]; curW = ww; }
+      else { cur.push(tk); curW += gap + ww; }
+    }
+    if (cur.length) titleLines.push(cur);
+    const titleLH = Math.round(titleSize * 1.18);
+    for (const ln of titleLines) {
+      let cx = pad;
+      for (const tk of ln) {
+        ctx.font = `${tk.hi?"italic ":""}700 ${titleSize}px 'IBM Plex Mono',monospace`;
+        ctx.fillStyle = tk.hi ? accent : titleColor;
+        ctx.fillText(tk.w, cx, y);
+        cx += ctx.measureText(tk.w).width + spNorm;
+      }
+      y += titleLH;
+    }
+    y += Math.round(10*k);
+
+    if (slide.corpo) {
+      ctx.font = `400 ${bodySize}px 'IBM Plex Mono',monospace`;
+      const blines = cvWordWrap(slide.corpo, bodySize, false);
+      y = cvDrawWrapped(blines, pad, y, bodySize, bodyColor, 1.55);
+    }
+    if (slide.punchline) {
+      const py = footY - Math.round(44*k);
+      ctx.fillStyle = accent;
+      ctx.fillRect(pad, py, Math.round(3*k), Math.round(punchSize*1.5));
+      ctx.font = `700 ${punchSize}px 'IBM Plex Mono',monospace`;
+      const plines = cvWordWrap(slide.punchline, punchSize, false);
+      cvDrawWrapped(plines, pad + Math.round(12*k), py, punchSize, light?C.black:C.white, 1.4);
+    }
     ctx.strokeStyle=light?"rgba(0,0,0,.1)":"rgba(255,255,255,.1)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,footY);ctx.lineTo(W-pad,footY);ctx.stroke();
     ctx.font=`400 ${9*k}px 'IBM Plex Mono',monospace`;ctx.fillStyle=light?"rgba(0,0,0,.4)":C.dim;ctx.fillText(HANDLE,pad,footY+10*k);
     ctx.fillStyle=accent;const pgStr=pg(i,total);ctx.fillText(pgStr,W-pad-ctx.measureText(pgStr).width,footY+10*k);
@@ -662,32 +732,32 @@ async function renderSlideToPNG(slide,i,total,estilo,perfil){
 const St={
   root:{minHeight:"100vh",background:C.black,color:C.white,fontFamily:MONO,padding:"16px 20px 40px"},
   header:{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:14,borderBottom:`1px solid ${C.line}`,marginBottom:14},
-  brand:{fontSize:15,fontWeight:700,letterSpacing:"0.04em"},
-  brandSub:{fontSize:12,color:C.dim,marginTop:2},
+  brand:{fontSize:13,fontWeight:700,letterSpacing:"0.04em"},
+  brandSub:{fontSize:11,color:C.dim,marginTop:2},
   grid:{display:"grid",gridTemplateColumns:"minmax(260px,360px) 1fr",gap:20,alignItems:"start"},
   left:{display:"flex",flexDirection:"column",gap:12},
   right:{display:"flex",flexDirection:"column",gap:11},
   card:{background:C.panel,border:`1px solid ${C.line}`,borderRadius:13,padding:15},
-  step:{fontSize:13,letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:10,display:"flex",alignItems:"center",gap:7},
+  step:{fontSize:11,letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:10,display:"flex",alignItems:"center",gap:7},
   stepNum:{color:C.green,fontWeight:700},
-  lab:{fontSize:13,color:C.dim,marginBottom:4},
+  lab:{fontSize:11,color:C.dim,marginBottom:4},
   textarea:{width:"100%",background:C.panel2,border:`1px solid ${C.line}`,borderRadius:8,color:C.white,fontFamily:MONO,fontSize:14,padding:10,resize:"vertical",boxSizing:"border-box",marginBottom:4},
   input:{width:"100%",background:C.panel2,border:`1px solid ${C.line}`,borderRadius:8,color:C.white,fontFamily:MONO,fontSize:14,padding:"9px 11px",boxSizing:"border-box"},
   btnPrimary:{width:"100%",background:C.green,color:C.black,border:"none",borderRadius:8,padding:"11px 14px",fontFamily:MONO,fontSize:14,fontWeight:700,cursor:"pointer"},
   btnGhost:{background:"transparent",color:C.white,border:`1px solid ${C.line}`,borderRadius:7,padding:"7px 12px",fontFamily:MONO,fontSize:13,cursor:"pointer"},
   ideia:{textAlign:"left",border:"1px solid",borderRadius:8,padding:"10px 12px",cursor:"pointer",fontFamily:MONO,color:C.white},
-  ideiaTit:{fontSize:14,fontWeight:700,marginBottom:3,lineHeight:1.3},
-  ideiaAng:{fontSize:12,color:C.dim,lineHeight:1.4},
+  ideiaTit:{fontSize:13,fontWeight:700,marginBottom:3,lineHeight:1.3},
+  ideiaAng:{fontSize:11,color:C.dim,lineHeight:1.4},
   targetRow:{display:"flex",gap:6,marginBottom:8},
   targetBtn:{flex:1,border:`1px solid ${C.line}`,borderRadius:7,padding:"6px 10px",fontFamily:MONO,fontSize:12,fontWeight:700,cursor:"pointer"},
   chatLog:{maxHeight:90,overflowY:"auto",marginBottom:8,display:"flex",flexDirection:"column",gap:4},
-  chatMsg:{fontSize:12,lineHeight:1.4},
+  chatMsg:{fontSize:11,lineHeight:1.4},
   erro:{background:"rgba(137,40,255,0.12)",border:`1px solid ${C.purple}`,borderRadius:8,padding:10,fontSize:13},
   previewBar:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8},
   styleSwitch:{display:"inline-flex",background:C.panel,border:`1px solid ${C.line}`,borderRadius:8,padding:3,gap:3},
   styleBtn:{border:"none",borderRadius:6,padding:"6px 10px",fontFamily:MONO,fontSize:13,fontWeight:700,cursor:"pointer"},
   stage:{display:"flex",justifyContent:"center",alignItems:"center",minHeight:440,background:C.panel,border:`1px solid ${C.line}`,borderRadius:13,padding:18},
-  placeholder:{color:C.dim,fontSize:14,textAlign:"center",maxWidth:280},
+  placeholder:{color:C.dim,fontSize:12,textAlign:"center",maxWidth:280},
   nav:{display:"flex",alignItems:"center",justifyContent:"center",gap:13},
   navBtn:{background:C.panel,color:C.white,border:`1px solid ${C.line}`,borderRadius:7,width:36,height:33,fontSize:14,cursor:"pointer"},
   dots:{display:"flex",gap:6},dot:{width:7,height:7,borderRadius:"50%",cursor:"pointer"},
@@ -697,7 +767,7 @@ const St={
   posBtn:{border:`1px solid ${C.line}`,borderRadius:7,padding:"5px 10px",fontFamily:MONO,fontSize:12,cursor:"pointer"},
   promptBox:{background:C.panel,border:`1px solid ${C.line}`,borderRadius:10,padding:11},
   promptHead:{fontSize:11,letterSpacing:"0.1em",color:C.dim,marginBottom:6,display:"flex",justifyContent:"space-between",alignItems:"center"},
-  promptTxt:{fontSize:13,lineHeight:1.5,color:"rgba(255,255,255,0.85)"},
+  promptTxt:{fontSize:12,lineHeight:1.5,color:"rgba(255,255,255,0.85)"},
   copyMini:{background:"transparent",color:C.green,border:`1px solid ${C.green}`,borderRadius:5,padding:"2px 8px",fontSize:11,fontFamily:MONO,cursor:"pointer"},
   avatarMini:{width:40,height:40,borderRadius:"50%",background:C.purple,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,fontFamily:MONO},
 };
