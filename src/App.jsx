@@ -146,6 +146,8 @@ export default function App(){
   const [editField,setEditField]=useState(null); // {slideIdx, field}
   const [editVal,setEditVal]=useState("");
   const [exportBusy,setExportBusy]=useState(false);
+  const [legenda,setLegenda]=useState("");
+  const [legendaBusy,setLegendaBusy]=useState(false);
   const slideRef=useRef(null);
 
   const ctx=()=>CONTEXTO+(copyInstr?"\n\nINSTRUÇÕES EXTRAS:\n"+copyInstr:"")+"\n\n"+ANTI_IA;
@@ -259,26 +261,75 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
     const b=new Blob([head+body],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="roteiro.txt";a.click();URL.revokeObjectURL(u);
   }
 
+  async function gerarLegenda(){
+    if(!slides.length)return;
+    setLegendaBusy(true);
+    const isEstetica=/est.t|harmoniz|dermat|pl.st|skin|beleza/i.test((imgDir||"")+foco);
+    const tipoNicho=isEstetica?"clinicas de estetica e harmonizacao":"medicos e profissionais de saude";
+    try{
+      const resumo=slides.map((s,i)=>(i+1)+". "+s.titulo+(s.punchline?" | "+s.punchline:"")).join("
+");
+      const out=await askClaude("Crie uma legenda de Instagram para um carrossel.
+TEMA: "+foco+"
+SLIDES:
+"+resumo+"
+PUBLICO: "+tipoNicho+"
+
+REGRAS:
+- Primeira linha: frase de impacto
+- 2-3 paragrafos curtos, voz de autoridade, primeira pessoa
+- CTA claro no final
+- Linha separadora
+- 15 a 20 hashtags: grandes do nicho, especificas, posicionamento (#webdesign #marketingmedico #siteparaclinica #captacaodepacientes)
+Tom direto, humano. Retorne APENAS a legenda pronta.");
+      setLegenda(out.trim());
+    }catch(e){setErro("Legenda erro: "+e.message);}
+    finally{setLegendaBusy(false);}
+  }
+
+  // Load lib dynamically
+  async function loadLib(url, check){
+    if(window[check])return;
+    return new Promise((res,rej)=>{const s=document.createElement("script");s.src=url;s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+  }
+
+  async function captureSlide(slideIndex){
+    // Temporarily navigate to slide, capture DOM, return to current
+    const prev=idx;
+    setIdx(slideIndex);
+    await new Promise(r=>setTimeout(r,80)); // wait for render
+    const node=slideRef.current?.firstElementChild;
+    if(!node)return null;
+    await loadLib("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js","html2canvas");
+    const canvas=await window.html2canvas(node,{
+      scale:3, useCORS:true, allowTaint:true, backgroundColor:null,
+      width:SLIDE_W, height:SLIDE_H, logging:false
+    });
+    setIdx(prev);
+    return canvas.toDataURL("image/png");
+  }
+
   async function exportarZip(){
     if(!slides.length)return;
     setExportBusy(true);
     try{
-      // load JSZip dynamically
-      await new Promise((res,rej)=>{
-        if(window.JSZip)return res();
-        const s=document.createElement("script");
-        s.src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
-        s.onload=res;s.onerror=rej;document.head.appendChild(s);
-      });
+      await loadLib("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js","JSZip");
+      await loadLib("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js","html2canvas");
       const zip=new window.JSZip();
-      // export each slide as PNG
       for(let i=0;i<slides.length;i++){
-        const png=await renderSlideToPNG(slides[i],i,slides.length,estilo,perfil);
+        const png=await captureSlide(i);
         if(png) zip.file(`slide-${String(i+1).padStart(2,"0")}.png`,png.split(",")[1],{base64:true});
       }
       const blob=await zip.generateAsync({type:"blob"});
       const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download="carrossel.zip";a.click();URL.revokeObjectURL(u);
     }catch(e){setErro("ZIP erro: "+e.message);}finally{setExportBusy(false);}
+  }
+
+  async function exportarPNG(){
+    if(!slide)return;
+    const png=await captureSlide(idx);
+    if(!png){setErro("Falha ao capturar slide.");return;}
+    const a=document.createElement("a");a.href=png;a.download=`slide-${String(idx+1).padStart(2,"0")}.png`;a.click();
   }
 
   const slide=slides[idx];
@@ -428,19 +479,19 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
                 <button key={k} onClick={()=>setSlideField("imgPos",k)} style={{...St.posBtn,background:slide.imgPos===k?C.green:"transparent",color:slide.imgPos===k?C.black:C.white}}>{l}</button>
               ))}
               {slide.bgImage&&(
-                <div style={{display:"flex",alignItems:"center",gap:6,background:C.panel2,borderRadius:8,padding:"4px 8px"}}>
-                  <span style={{fontSize:9,color:C.dim}}>Y</span>
-                  <div style={{position:"relative",display:"flex",alignItems:"center"}}>
-                    <input type="range" min="-100" max="100" value={slide.imgOffsetY||0}
-                      onChange={e=>{
-                        const v=Number(e.target.value);
-                        const snapped=Math.abs(v)<=4?0:v;
-                        setSlides(p=>p.map((s,i)=>i===idx?{...s,imgOffsetY:snapped}:s));
-                      }}
-                      style={{width:80,accentColor:C.green}}/>
-                    {Math.abs(slide.imgOffsetY||0)<=4&&<div style={{position:"absolute",left:"50%",transform:"translateX(-50%)",width:8,height:8,borderRadius:"50%",background:C.green,pointerEvents:"none",boxShadow:`0 0 6px ${C.green}`}}/>}
-                  </div>
-                  <span style={{fontSize:9,color:slide.imgOffsetY===0?C.green:C.dim,minWidth:22}}>{slide.imgOffsetY||0}</span>
+                <div style={{display:"flex",gap:8,alignItems:"center",background:C.panel2,borderRadius:8,padding:"4px 10px"}}>
+                  {[["Y",slide.imgOffsetY||0,"imgOffsetY"],["X",slide.imgOffsetX||0,"imgOffsetX"]].map(([label,val,field])=>(
+                    <div key={field} style={{display:"flex",alignItems:"center",gap:4}}>
+                      <span style={{fontSize:9,color:C.dim,width:10}}>{label}</span>
+                      <div style={{position:"relative",display:"flex",alignItems:"center"}}>
+                        <input type="range" min="-100" max="100" value={val}
+                          onChange={e=>{const v=Number(e.target.value);const snapped=Math.abs(v)<=4?0:v;setSlides(p=>p.map((s,i)=>i===idx?{...s,[field]:snapped}:s));}}
+                          style={{width:70,accentColor:C.green}}/>
+                        {Math.abs(val)<=4&&<div style={{position:"absolute",left:"50%",transform:"translateX(-50%)",width:7,height:7,borderRadius:"50%",background:C.green,pointerEvents:"none",boxShadow:`0 0 5px ${C.green}`}}/>}
+                      </div>
+                      <span style={{fontSize:9,color:val===0?C.green:C.dim,minWidth:22}}>{val}</span>
+                    </div>
+                  ))}
                 </div>
               )}
               {slide.tipo==="capa"&&estilo!=="twitter"&&(
@@ -475,6 +526,20 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
               {chatLog.length>0&&<div style={St.chatLog}>{chatLog.map((m,i)=><div key={i} style={{...St.chatMsg,color:m.who==="voce"?C.white:C.green}}><b>{m.who}:</b> {m.txt}</div>)}</div>}
               <textarea style={St.textarea} rows={2} value={chatInput} onChange={e=>setChatInput(e.target.value)} placeholder="ex.: mais provocativo / trocar o exemplo"/>
               <button style={St.btnPrimary} onClick={enviarAjuste} disabled={chatBusy}>{chatBusy?"Ajustando…":"Enviar"}</button>
+            </div>
+
+            <div style={St.card}>
+              <div style={{...St.step,marginBottom:8}}><span style={St.stepNum}>L</span> Legenda do post</div>
+              <div style={{display:"flex",gap:8,marginBottom:legenda?10:0}}>
+                <button style={{...St.btnPrimary,flex:1}} onClick={gerarLegenda} disabled={legendaBusy||!slides.length}>
+                  {legendaBusy?"Gerando...":"Gerar legenda + hashtags"}
+                </button>
+                {legenda&&<button style={St.btnGhost} onClick={()=>copiar(legenda)}>Copiar</button>}
+              </div>
+              {legenda&&(
+                <textarea value={legenda} onChange={e=>setLegenda(e.target.value)}
+                  style={{...St.textarea,marginBottom:0,minHeight:200,fontSize:12,lineHeight:1.6}}/>
+              )}
             </div>
           </>)}
         </div>
@@ -513,14 +578,14 @@ function EditablePunch({text,accent,light,size=12,weight=700,field,slideIdx,edit
 function PunchEl({txt,accent,light}){
   return<div style={{borderLeft:`3px solid ${accent}`,paddingLeft:11,fontSize:14,fontWeight:700,lineHeight:1.4,color:light?C.black:C.white,marginBottom:12,textWrap:"pretty"}}>{widow(txt)}</div>;
 }
-function BandEl({src,h,offsetY,mode}){
+function BandEl({src,h,offsetY,offsetX,mode}){
   if(mode==="ilustracao") return(
     <div style={{display:"flex",justifyContent:"center",height:h||120,flexShrink:0}}>
       <img src={src} alt="" style={{height:"100%",width:"auto",objectFit:"contain",filter:"drop-shadow(0 4px 16px rgba(0,0,0,0.5))"}}/>
     </div>
   );
   return<div style={{borderRadius:9,overflow:"hidden",height:h||90,flexShrink:0}}>
-    <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:`center ${50+(offsetY||0)}%`}}/>
+    <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:`${50+(offsetX||0)}% ${50+(offsetY||0)}%`}}/>
   </div>;
 }
 function EditableText({text,destaque,size,color,accent,field,slideIdx,editField,editVal,setEditVal,onEdit,onCommit,bold=true,lh,style={}}){
@@ -531,7 +596,7 @@ function EditableText({text,destaque,size,color,accent,field,slideIdx,editField,
   const parts=destaque?splitTitulo(text,destaque):null;
   return<div onDoubleClick={()=>onEdit(slideIdx,field)} title="Duplo clique para editar"
     style={{cursor:"text",fontFamily:MONO,fontWeight:bold?700:400,fontSize:size,lineHeight:lh||(bold?1.12:1.5),color,textWrap:bold?"balance":"pretty",...style}}>
-    {parts?parts.map((p,i)=><span key={i} style={p.hi?{fontStyle:"italic",color:accent||color}:undefined}>{p.t}</span>):(text||<span style={{opacity:0.3,fontStyle:"italic"}}>vazio</span>)}
+    {parts?parts.map((p,i)=><span key={i} style={p.hi?{fontStyle:"italic",fontWeight:700,color:accent||color}:undefined}>{p.t}</span>):(text||<span style={{opacity:0.3,fontStyle:"italic"}}>vazio</span>)}
   </div>;
 }
 function cardBase(light){return{width:SLIDE_W,height:SLIDE_H,borderRadius:14,position:"relative",overflow:"hidden",boxShadow:"0 20px 50px rgba(0,0,0,0.55)",border:light?"none":`1px solid ${C.line}`,background:light?"#FAFAF7":C.black};}
@@ -541,13 +606,13 @@ const padCol={position:"relative",height:"100%",padding:22,display:"flex",flexDi
 
 function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onCommit}){
   const light=eff==="light",accent=light?C.purple:C.green,fg=light?C.black:C.white;
-  const lay=slide.coverLayout||0,img=slide.bgImage,off=slide.imgOffsetY||0;
+  const lay=slide.coverLayout||0,img=slide.bgImage,off=slide.imgOffsetY||0,offX=slide.imgOffsetX||0;
   const titleColor=img&&(lay===0||lay===2)?C.white:fg;
   const titleAccent=img&&(lay===0||lay===2)?C.green:accent;
 
   const tp=slide.typo||{ts:28,tw:700,bs:12,bw:400,blh:1.5,ps:12,pw:700};
   const titleEl=<EditableText text={slide.titulo} destaque={slide.destaque} size={tp.ts} color={titleColor} accent={titleAccent} field="titulo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>;
-  const corpoEl=slide.corpo?<EditableText text={slide.corpo} size={tp.bs} color={img?"rgba(255,255,255,.8)":(light?"rgba(0,0,0,.6)":"rgba(255,255,255,.7)")} bold={tp.bw>=700} lh={tp.blh} field="corpo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{marginTop:10}}/>:null;
+  const corpoEl=slide.corpo?<EditableText text={slide.corpo} destaque={slide.corpoDestaque} accent={accent} size={tp.bs} color={img?"rgba(255,255,255,.8)":(light?"rgba(0,0,0,.6)":"rgba(255,255,255,.7)")} bold={tp.bw>=700} lh={tp.blh} field="corpo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{marginTop:10}}/>:null;
   const footEl=<Foot light={!img&&light} accent={img&&(lay===0||lay===2)?C.green:accent} label={pg(idx,total)}/>;
 
   if(lay===2)return(
@@ -571,7 +636,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
     <div style={cardBase(light)}>
       {!light&&<Glows/>}
       <div style={{...padCol,justifyContent:"space-between"}}>
-        {img&&<BandEl src={img} h={150} offsetY={off} mode={slide.imgMode||"foto"}/>}
+        {img&&<BandEl src={img} h={150} offsetY={off} offsetX={slide.imgOffsetX||0} mode={slide.imgMode||"foto"}/>}
         <div style={{display:"flex",flexDirection:"column",gap:10,flex:1,justifyContent:"center",paddingTop:img?12:0}}>
           {titleEl}
           {corpoEl}
@@ -588,7 +653,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
           {titleEl}
           {corpoEl}
         </div>
-        {img&&<><BandEl src={img} h={150} offsetY={off} mode={slide.imgMode||"foto"}/><div style={{height:8}}/></>}
+        {img&&<><BandEl src={img} h={150} offsetY={off} offsetX={slide.imgOffsetX||0} mode={slide.imgMode||"foto"}/><div style={{height:8}}/></>}
         {footEl}
       </div>
     </div>
@@ -615,7 +680,7 @@ function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,o
 
   const tp=slide.typo||{ts:20,tw:700,bs:12,bw:400,blh:1.5,ps:12,pw:700};
   const titleEl=<EditableText text={slide.titulo} destaque={slide.destaque} size={tp.ts} color={titleColor} accent={accent} field="titulo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>;
-  const corpoEl2=slide.corpo?<EditableText text={slide.corpo} size={tp.bs} color={cc} bold={tp.bw>=700} lh={tp.blh} field="corpo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{marginTop:11}}/>:null;
+  const corpoEl2=slide.corpo?<EditableText text={slide.corpo} destaque={slide.corpoDestaque} accent={accent} size={tp.bs} color={cc} bold={tp.bw>=700} lh={tp.blh} field="corpo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{marginTop:11}}/>:null;
   const punchEl2=slide.punchline?<EditablePunch text={slide.punchline} accent={accent} light={light} size={tp.ps} weight={tp.pw} field="punchline" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>:null;
 
   if(img&&pos==="bg")return(
@@ -644,7 +709,7 @@ function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,o
         {hasImg&&pos==="top"&&<div style={{marginBottom:12}}><BandEl src={img} h={90} offsetY={off}/></div>}
         {titleEl}
         {slide.corpo?corpoEl2:(!hasContent&&<div style={{flex:1}}/>)}
-        {hasImg&&pos==="bottom"&&<div style={{marginTop:12}}><BandEl src={img} h={slide.imgMode==="ilustracao"?130:90} offsetY={off} mode={slide.imgMode||"foto"}/></div>}
+        {hasImg&&pos==="bottom"&&<div style={{marginTop:12}}><BandEl src={img} h={slide.imgMode==="ilustracao"?130:90} offsetY={off} offsetX={slide.imgOffsetX||0} mode={slide.imgMode||"foto"}/></div>}
         <div style={{flex:1}}/>
         {punchEl2}
         <Foot light={light} accent={accent} label={pg(idx,total)}/>
@@ -667,159 +732,6 @@ function TweetSlide({slide,idx,total,perfil,editField,editVal,setEditVal,onEdit,
       {slide.punchline&&<div style={TW.quote}>{widow(slide.punchline)}</div>}
       <div style={{flex:1}}/>
       <div style={TW.foot}>{pg(idx,total)}</div>
-    </div>
-  );
-}
-
-// PNG render headless pra ZIP
-async function cvLoadImg(src){return new Promise(res=>{const i=new Image();i.crossOrigin="anonymous";i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src;});}
-async function renderSlideToPNG(slide,i,total,estilo,perfil){
-  try{
-    const W=1080,H=1350,k=W/SLIDE_W;
-    const cv=document.createElement("canvas");cv.width=W;cv.height=H;
-    const ctx=cv.getContext("2d");
-    const eff=estilo==="twitter"?"twitter":estilo==="sortido"?sortidoEff(slide,i):"dark";
-    const light=eff==="light";
-    ctx.fillStyle=light?"#FAFAF7":"#000000";ctx.fillRect(0,0,W,H);
-    if(!light){
-      ctx.save();ctx.globalCompositeOperation="lighter";
-      let g=ctx.createRadialGradient(W*.05,0,0,W*.05,0,W*.75);g.addColorStop(0,"rgba(137,40,255,0.5)");g.addColorStop(1,"rgba(137,40,255,0)");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-      g=ctx.createRadialGradient(W*.95,H,0,W*.95,H,W*.75);g.addColorStop(0,"rgba(0,239,158,0.3)");g.addColorStop(1,"rgba(0,239,158,0)");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-      ctx.restore();
-    }
-    const pad=22*k,footY=H-pad-28*k;
-    const accent=light?C.purple:C.green;
-    const img=slide.bgImage?await cvLoadImg(slide.bgImage):null;
-    if(img&&(slide.tipo==="capa"||slide.imgPos==="bg")){
-      const off=slide.imgOffsetY||0;
-      const ir=img.width/img.height,r=W/H;
-      let sw,sh,sx,sy;
-      if(ir>r){sh=img.height;sw=sh*r;sx=(img.width-sw)/2;sy=0;}else{sw=img.width;sh=sw/r;sx=0;sy=(img.height-sh)/2;}
-      const offPx=(off/100)*sh;
-      ctx.drawImage(img,sx,sy+offPx,sw,sh-Math.abs(offPx)*2,0,0,W,H);
-      const gr=ctx.createLinearGradient(0,0,0,H);gr.addColorStop(0,"rgba(0,0,0,.1)");gr.addColorStop(1,"rgba(0,0,0,.82)");ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
-    }
-    try{await Promise.all([document.fonts.load(`700 ${20*k}px 'IBM Plex Mono'`),document.fonts.load(`italic 700 ${20*k}px 'IBM Plex Mono'`)]);}catch(_){}
-    // title
-    const parts=splitTitulo(slide.titulo,slide.destaque);
-    const isCapa = slide.tipo==="capa";
-    const titleSize = isCapa ? Math.round(26*k) : Math.round(20*k);
-    const bodySize = Math.round(13*k);
-    const punchSize = Math.round(12*k);
-    const titleColor = (img && isCapa) ? C.white : (light ? C.black : C.white);
-    const bodyColor = light ? "rgba(0,0,0,.65)" : "rgba(255,255,255,.74)";
-    const maxW = W - pad*2;
-    let y = isCapa ? Math.round(H*0.54) : Math.round(pad + 20*k);
-
-    // draw title with word-wrap preserving spaces
-    function cvWordWrap(text, size, italic) {
-      ctx.font = `${italic?"italic ":""}700 ${size}px 'IBM Plex Mono',monospace`;
-      const sp = ctx.measureText(" ").width;
-      const ws = text.split(/\s+/).filter(Boolean);
-      const lines = []; let line = "", lineW = 0;
-      for (const w of ws) {
-        const ww = ctx.measureText(w).width;
-        const gap = line ? sp : 0;
-        if (lineW + gap + ww > maxW && line) { lines.push(line); line = w; lineW = ww; }
-        else { line = line ? line + " " + w : w; lineW += gap + ww; }
-      }
-      if (line) lines.push(line);
-      return lines;
-    }
-    function cvDrawWrapped(lines, x, startY, size, color, lhMult) {
-      const lh = Math.round(size * lhMult);
-      for (const l of lines) { ctx.fillStyle = color; ctx.fillText(l, x, startY); startY += lh; }
-      return startY;
-    }
-
-    ctx.textBaseline = "top";
-    // title - mixed hi/normal words
-    const titleParts = splitTitulo(slide.titulo, slide.destaque);
-    const allWords = [];
-    titleParts.forEach(p => { p.t.split(/\s+/).filter(Boolean).forEach(w => allWords.push({w, hi: p.hi})); });
-    // wrap by measuring
-    const spNorm = (() => { ctx.font = `700 ${titleSize}px 'IBM Plex Mono',monospace`; return ctx.measureText(" ").width; })();
-    const titleLines = []; let cur = [], curW = 0;
-    for (const tk of allWords) {
-      ctx.font = `${tk.hi?"italic ":""}700 ${titleSize}px 'IBM Plex Mono',monospace`;
-      const ww = ctx.measureText(tk.w).width;
-      const gap = cur.length ? spNorm : 0;
-      if (curW + gap + ww > maxW && cur.length) { titleLines.push(cur); cur = [tk]; curW = ww; }
-      else { cur.push(tk); curW += gap + ww; }
-    }
-    if (cur.length) titleLines.push(cur);
-    const titleLH = Math.round(titleSize * 1.18);
-    for (const ln of titleLines) {
-      let cx = pad;
-      for (const tk of ln) {
-        ctx.font = `${tk.hi?"italic ":""}700 ${titleSize}px 'IBM Plex Mono',monospace`;
-        ctx.fillStyle = tk.hi ? accent : titleColor;
-        ctx.fillText(tk.w, cx, y);
-        cx += ctx.measureText(tk.w).width + spNorm;
-      }
-      y += titleLH;
-    }
-    y += Math.round(10*k);
-
-    if (slide.corpo) {
-      ctx.font = `400 ${bodySize}px 'IBM Plex Mono',monospace`;
-      const blines = cvWordWrap(slide.corpo, bodySize, false);
-      y = cvDrawWrapped(blines, pad, y, bodySize, bodyColor, 1.55);
-    }
-    if (slide.punchline) {
-      const py = footY - Math.round(44*k);
-      ctx.fillStyle = accent;
-      ctx.fillRect(pad, py, Math.round(3*k), Math.round(punchSize*1.5));
-      ctx.font = `700 ${punchSize}px 'IBM Plex Mono',monospace`;
-      const plines = cvWordWrap(slide.punchline, punchSize, false);
-      cvDrawWrapped(plines, pad + Math.round(12*k), py, punchSize, light?C.black:C.white, 1.4);
-    }
-    ctx.strokeStyle=light?"rgba(0,0,0,.1)":"rgba(255,255,255,.1)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,footY);ctx.lineTo(W-pad,footY);ctx.stroke();
-    ctx.font=`400 ${9*k}px 'IBM Plex Mono',monospace`;ctx.fillStyle=light?"rgba(0,0,0,.4)":C.dim;ctx.fillText(HANDLE,pad,footY+10*k);
-    ctx.fillStyle=accent;const pgStr=pg(i,total);ctx.fillText(pgStr,W-pad-ctx.measureText(pgStr).width,footY+10*k);
-    return cv.toDataURL("image/png");
-  }catch(e){console.error(e);return null;}
-}
-
-
-function TypoPanel({slide,idx,setSlides}){
-  const t=slide.typo||{ts:20,tw:700,bs:12,bw:400,blh:1.5,ps:12,pw:700};
-  const upd=(k,v)=>setSlides(p=>p.map((s,i)=>i===idx?{...s,typo:{...s.typo,[k]:v}}:s));
-  const row=(label,field,min,max,step,isWeight)=>(
-    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-      <span style={{fontSize:10,color:C.dim,width:90,flexShrink:0}}>{label}</span>
-      {isWeight
-        ?<div style={{display:"flex",gap:4}}>
-          {[400,500,700].map(w=><button key={w} onClick={()=>upd(field,w)} style={{...St.posBtn,fontSize:10,padding:"3px 8px",background:t[field]===w?C.green:"transparent",color:t[field]===w?C.black:C.white}}>{w}</button>)}
-        </div>
-        :<><input type="range" min={min} max={max} step={step} value={t[field]} onChange={e=>upd(field,Number(e.target.value))} style={{flex:1,accentColor:C.green}}/><span style={{fontSize:10,color:C.white,minWidth:28}}>{t[field]}</span></>
-      }
-    </div>
-  );
-  return(
-    <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:11,padding:12,marginTop:0}}>
-      <div style={{fontSize:10,letterSpacing:"0.1em",color:C.dim,marginBottom:10}}>TIPOGRAFIA · slide {idx+1}</div>
-      <div style={{fontSize:10,color:C.green,marginBottom:4}}>Título</div>
-      {row("Tamanho",      "ts",  14,40,1,false)}
-      {row("Peso",         "tw",  400,700,100,true)}
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-        <span style={{fontSize:10,color:C.dim,width:90,flexShrink:0}}>Destaque</span>
-        <input
-          value={slide.destaque||""}
-          onChange={e=>setSlides(p=>p.map((s,i)=>i===idx?{...s,destaque:e.target.value}:s))}
-          placeholder="palavra ou trecho exato do título"
-          style={{flex:1,background:C.panel2,border:`1px solid ${C.line}`,borderRadius:6,color:C.white,fontFamily:MONO,fontSize:11,padding:"4px 8px",outline:"none"}}
-        />
-        {slide.destaque&&<button onClick={()=>setSlides(p=>p.map((s,i)=>i===idx?{...s,destaque:""}:s))} style={{...St.removeImg,padding:"3px 7px",fontSize:10}}>✕</button>}
-      </div>
-      <div style={{fontSize:9,color:C.dim,marginBottom:6,paddingLeft:98}}>Digite exatamente como aparece no título para destacar em {slide.tipo==="capa"||true?"itálico+cor":""} </div>
-      <div style={{fontSize:10,color:C.green,marginBottom:4,marginTop:6}}>Corpo</div>
-      {row("Tamanho",      "bs",  10,22,1,false)}
-      {row("Peso",         "bw",  400,700,100,true)}
-      {row("Line height",  "blh", 1.2,2.2,0.05,false)}
-      <div style={{fontSize:10,color:C.green,marginBottom:4,marginTop:6}}>Punchline</div>
-      {row("Tamanho",      "ps",  10,22,1,false)}
-      {row("Peso",         "pw",  400,700,100,true)}
     </div>
   );
 }
