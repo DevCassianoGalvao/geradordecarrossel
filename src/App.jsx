@@ -462,6 +462,11 @@ function Foot({light,accent,label}){
     <span>{HANDLE}</span><span style={{color:accent,fontStyle:"italic"}}>{label}</span>
   </div>;
 }
+function EditablePunch({text,accent,light,field,slideIdx,editField,editVal,setEditVal,onEdit,onCommit}){
+  const isMe=editField&&editField.slideIdx===slideIdx&&editField.field===field;
+  if(isMe)return<div style={{borderLeft:`3px solid ${accent}`,paddingLeft:11,marginBottom:12}}><textarea autoFocus value={editVal} onChange={e=>setEditVal(e.target.value)} onBlur={onCommit} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();onCommit();}}} style={{width:"100%",background:"rgba(0,0,0,0.5)",border:`1px solid ${accent}`,borderRadius:6,color:C.white,fontFamily:MONO,fontSize:14,fontWeight:700,padding:4,resize:"none",outline:"none"}}/></div>;
+  return<div onDoubleClick={()=>onEdit(slideIdx,field)} title="Duplo clique para editar" style={{borderLeft:`3px solid ${accent}`,paddingLeft:11,fontSize:14,fontWeight:700,lineHeight:1.4,color:light?C.black:C.white,marginBottom:12,cursor:"text",textWrap:"pretty"}}>{widow(text)}</div>;
+}
 function PunchEl({txt,accent,light}){
   return<div style={{borderLeft:`3px solid ${accent}`,paddingLeft:11,fontSize:14,fontWeight:700,lineHeight:1.4,color:light?C.black:C.white,marginBottom:12,textWrap:"pretty"}}>{widow(txt)}</div>;
 }
@@ -475,14 +480,16 @@ function BandEl({src,h,offsetY,mode}){
     <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:`center ${50+(offsetY||0)}%`}}/>
   </div>;
 }
-function EditableText({text,size,color,field,slideIdx,editField,editVal,setEditVal,onEdit,onCommit,style={}}){
+function EditableText({text,destaque,size,color,accent,field,slideIdx,editField,editVal,setEditVal,onEdit,onCommit,style={}}){
   const isMe=editField&&editField.slideIdx===slideIdx&&editField.field===field;
   if(isMe)return<textarea autoFocus value={editVal} onChange={e=>setEditVal(e.target.value)}
     onBlur={onCommit} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();onCommit();}}}
-    style={{width:"100%",background:"rgba(0,0,0,0.5)",border:`1px solid ${C.green}`,borderRadius:6,color:C.white,fontFamily:MONO,fontSize:size,fontWeight:700,padding:4,resize:"none",outline:"none",...style}}/>;
-  return<div onDoubleClick={()=>onEdit(slideIdx,field)}
-    title="Duplo clique para editar"
-    style={{cursor:"text",fontSize:size,fontWeight:700,color,lineHeight:1.3,...style}}>{text||<span style={{opacity:0.3,fontStyle:"italic"}}>vazio</span>}</div>;
+    style={{width:"100%",background:"rgba(0,0,0,0.5)",border:`1px solid ${C.green}`,borderRadius:6,color:C.white,fontFamily:MONO,fontSize:size,fontWeight:700,padding:6,resize:"none",outline:"none",...style}}/>;
+  const parts=destaque?splitTitulo(text,destaque):null;
+  return<div onDoubleClick={()=>onEdit(slideIdx,field)} title="Duplo clique para editar"
+    style={{cursor:"text",fontFamily:MONO,fontWeight:700,fontSize:size,lineHeight:1.12,color,textWrap:"balance",...style}}>
+    {parts?parts.map((p,i)=><span key={i} style={p.hi?{fontStyle:"italic",color:accent||color}:undefined}>{p.t}</span>):(text||<span style={{opacity:0.3,fontStyle:"italic"}}>vazio</span>)}
+  </div>;
 }
 function cardBase(light){return{width:SLIDE_W,height:SLIDE_H,borderRadius:14,position:"relative",overflow:"hidden",boxShadow:"0 20px 50px rgba(0,0,0,0.55)",border:light?"none":`1px solid ${C.line}`,background:light?"#FAFAF7":C.black};}
 const imgFull={position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"};
@@ -492,13 +499,17 @@ const padCol={position:"relative",height:"100%",padding:22,display:"flex",flexDi
 function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onCommit}){
   const light=eff==="light",accent=light?C.purple:C.green,fg=light?C.black:C.white;
   const lay=slide.coverLayout||0,img=slide.bgImage,off=slide.imgOffsetY||0;
+  const titleColor=img&&(lay===0||lay===2)?C.white:fg;
+  const titleAccent=img&&(lay===0||lay===2)?C.green:accent;
 
-  const titleEl=splitEl(slide,28,img&&(lay===0||lay===2)?C.white:fg,img&&(lay===0||lay===2)?C.green:accent);
+  const titleEl=<EditableText text={slide.titulo} destaque={slide.destaque} size={28} color={titleColor} accent={titleAccent} field="titulo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>;
+  const corpoEl=slide.corpo?<EditableText text={slide.corpo} size={14} color={img?"rgba(255,255,255,.8)":(light?"rgba(0,0,0,.6)":"rgba(255,255,255,.7)")} field="corpo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{marginTop:10}}/>:null;
   const footEl=<Foot light={!img&&light} accent={img&&(lay===0||lay===2)?C.green:accent} label={pg(idx,total)}/>;
 
   if(lay===2)return(
     <div style={cardBase(light)}>
-      {img?<><img src={img} alt="" style={{...imgFull,objectPosition:`center ${50+off}%`}}/><div style={scrim}/></>:<Glows/>}
+      {img&&slide.imgMode!=="ilustracao"?<><img src={img} alt="" style={{...imgFull,objectPosition:`center ${50+off}%`}}/><div style={scrim}/></>:<Glows/>}
+      {img&&slide.imgMode==="ilustracao"&&<img src={img} alt="" style={{position:"absolute",bottom:60,right:10,height:"55%",width:"auto",objectFit:"contain",filter:"drop-shadow(0 4px 20px rgba(0,0,0,0.6))",zIndex:1,pointerEvents:"none"}}/>}
       <div style={padCol}><div style={{flex:1}}/>{titleEl}<div style={{marginTop:10}}>{footEl}</div></div>
     </div>
   );
@@ -507,7 +518,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
       {!light&&<Glows/>}
       <div style={{...padCol,paddingTop:55}}>
         {titleEl}
-        {slide.corpo&&<div style={{marginTop:12,fontSize:16,color:light?"rgba(0,0,0,.6)":"rgba(255,255,255,.7)",textWrap:"pretty"}}>{widow(slide.corpo)}</div>}
+        {corpoEl}
         <div style={{flex:1}}/>{footEl}
       </div>
     </div>
@@ -519,7 +530,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
         {img&&<BandEl src={img} h={150} offsetY={off} mode={slide.imgMode||"foto"}/>}
         <div style={{display:"flex",flexDirection:"column",gap:10,flex:1,justifyContent:"center",paddingTop:img?12:0}}>
           {titleEl}
-          {slide.corpo&&<div style={{fontSize:16,color:light?"rgba(0,0,0,.6)":"rgba(255,255,255,.7)"}}>{widow(slide.corpo)}</div>}
+          {corpoEl}
         </div>
         {footEl}
       </div>
@@ -531,7 +542,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
       <div style={{...padCol,justifyContent:"space-between"}}>
         <div style={{display:"flex",flexDirection:"column",gap:10,flex:1,justifyContent:"center"}}>
           {titleEl}
-          {slide.corpo&&<div style={{fontSize:16,color:light?"rgba(0,0,0,.6)":"rgba(255,255,255,.7)"}}>{widow(slide.corpo)}</div>}
+          {corpoEl}
         </div>
         {img&&<><BandEl src={img} h={150} offsetY={off} mode={slide.imgMode||"foto"}/><div style={{height:8}}/></>}
         {footEl}
@@ -544,7 +555,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
       {img?<><img src={img} alt="" style={{...imgFull,objectPosition:`center ${50+off}%`}}/><div style={scrim}/></>:null}
       <div style={padCol}>
         <div style={{flex:1}}/>{titleEl}
-        {slide.corpo&&<div style={{marginTop:10,fontSize:16,color:img?"rgba(255,255,255,.8)":(light?"rgba(0,0,0,.6)":"rgba(255,255,255,.7)")}}>{widow(slide.corpo)}</div>}
+        {corpoEl}
         <div style={{fontSize:9,letterSpacing:"0.12em",color:img?"rgba(255,255,255,.6)":(light?"rgba(0,0,0,.35)":C.dim),margin:"14px 0 12px"}}>ARRASTA →</div>
         {footEl}
       </div>
@@ -558,9 +569,9 @@ function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,o
   const cc=light?"rgba(0,0,0,.65)":"rgba(255,255,255,.74)";
   const titleColor=light?C.black:C.white;
 
-  const titleEl=<div style={{fontFamily:MONO,fontWeight:700,fontSize:20,lineHeight:1.12,color:titleColor,textWrap:"balance"}}>
-    {splitTitulo(slide.titulo,slide.destaque).map((p,i)=><span key={i} style={p.hi?{fontStyle:"italic",color:accent}:undefined}>{p.t}</span>)}
-  </div>;
+  const titleEl=<EditableText text={slide.titulo} destaque={slide.destaque} size={20} color={titleColor} accent={accent} field="titulo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>;
+  const corpoEl2=slide.corpo?<EditableText text={slide.corpo} size={14} color={cc} field="corpo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{marginTop:11}}/>:null;
+  const punchEl2=slide.punchline?<EditablePunch text={slide.punchline} accent={accent} light={light} field="punchline" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>:null;
 
   if(img&&pos==="bg")return(
     <div style={cardBase(light)}>
@@ -568,9 +579,9 @@ function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,o
       {!light&&<Glows/>}
       <div style={padCol}>
         {titleEl}
-        {slide.corpo&&<div style={{marginTop:12,fontSize:16,lineHeight:1.5,color:cc,textWrap:"pretty"}}>{widow(slide.corpo)}</div>}
+        {corpoEl2}
         <div style={{flex:1}}/>
-        {slide.punchline&&<PunchEl txt={slide.punchline} accent={accent} light={light}/>}
+        {punchEl2}
         <Foot light={light} accent={accent} label={pg(idx,total)}/>
       </div>
     </div>
@@ -587,13 +598,10 @@ function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,o
         </div>
         {hasImg&&pos==="top"&&<div style={{marginBottom:12}}><BandEl src={img} h={90} offsetY={off}/></div>}
         {titleEl}
-        {slide.corpo
-          ?<div style={{marginTop:12,fontSize:16,lineHeight:1.5,color:cc,textWrap:"pretty"}}>{widow(slide.corpo)}</div>
-          :!hasContent&&<div style={{flex:1}}/>
-        }
+        {slide.corpo?corpoEl2:(!hasContent&&<div style={{flex:1}}/>)}
         {hasImg&&pos==="bottom"&&<div style={{marginTop:12}}><BandEl src={img} h={slide.imgMode==="ilustracao"?130:90} offsetY={off} mode={slide.imgMode||"foto"}/></div>}
         <div style={{flex:1}}/>
-        {slide.punchline&&<PunchEl txt={slide.punchline} accent={accent} light={light}/>}
+        {punchEl2}
         <Foot light={light} accent={accent} label={pg(idx,total)}/>
       </div>
     </div>
