@@ -761,6 +761,17 @@ function TypoPanel({slide,idx,setSlides}){
       <div style={{fontSize:10,color:C.green,marginBottom:4}}>Título</div>
       {row("Tamanho",      "ts",  14,40,1,false)}
       {row("Peso",         "tw",  400,700,100,true)}
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+        <span style={{fontSize:10,color:C.dim,width:90,flexShrink:0}}>Destaque</span>
+        <input
+          value={slide.destaque||""}
+          onChange={e=>setSlides(p=>p.map((s,i)=>i===idx?{...s,destaque:e.target.value}:s))}
+          placeholder="palavra ou trecho exato do título"
+          style={{flex:1,background:C.panel2,border:`1px solid ${C.line}`,borderRadius:6,color:C.white,fontFamily:MONO,fontSize:11,padding:"4px 8px",outline:"none"}}
+        />
+        {slide.destaque&&<button onClick={()=>setSlides(p=>p.map((s,i)=>i===idx?{...s,destaque:""}:s))} style={{...St.removeImg,padding:"3px 7px",fontSize:10}}>✕</button>}
+      </div>
+      <div style={{fontSize:9,color:C.dim,marginBottom:6,paddingLeft:98}}>Digite exatamente como aparece no título para destacar em {slide.tipo==="capa"||true?"itálico+cor":""} </div>
       <div style={{fontSize:10,color:C.green,marginBottom:4,marginTop:6}}>Corpo</div>
       {row("Tamanho",      "bs",  10,22,1,false)}
       {row("Peso",         "bw",  400,700,100,true)}
