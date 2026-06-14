@@ -78,7 +78,47 @@ function sortidoEff(slide,idx){
 }
 function widow(s){if(!s)return s;const i=s.lastIndexOf(" ");return i>0?s.slice(0,i)+"\u00A0"+s.slice(i+1):s;}
 
+const SENHA = "150771ca";
+
+function LoginGate({onLogin}){
+  const [val,setVal]=useState("");
+  const [erro,setErro]=useState(false);
+  function tentar(e){
+    e.preventDefault();
+    if(val===SENHA){onLogin();}
+    else{setErro(true);setTimeout(()=>setErro(false),1500);}
+  }
+  return(
+    <div style={{minHeight:"100vh",background:C.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:MONO}}>
+      <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:16,padding:"40px 36px",width:320,textAlign:"center"}}>
+        <div style={{fontSize:14,fontWeight:700,color:C.white,letterSpacing:"0.05em",marginBottom:4}}>GERADOR DE CARROSSEL</div>
+        <div style={{fontSize:11,color:C.dim,marginBottom:28}}>Cassiano Galvão</div>
+        <form onSubmit={tentar} style={{display:"flex",flexDirection:"column",gap:12}}>
+          <input
+            id="cg-senha"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            value={val}
+            onChange={e=>{setVal(e.target.value);setErro(false);}}
+            placeholder="senha"
+            style={{background:C.panel2,border:`1px solid ${erro?C.purple:C.line}`,borderRadius:9,color:C.white,fontFamily:MONO,fontSize:14,padding:"11px 14px",outline:"none",textAlign:"center",transition:"border-color 0.2s"}}
+          />
+          <button type="submit" style={{background:C.green,color:C.black,border:"none",borderRadius:9,padding:"11px",fontFamily:MONO,fontSize:13,fontWeight:700,cursor:"pointer"}}>
+            Entrar
+          </button>
+          {erro&&<div style={{fontSize:11,color:C.purple}}>Senha incorreta</div>}
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function App(){
+  const [autenticado,setAutenticado]=useState(()=>{try{return sessionStorage.getItem("cg_auth")==="1";}catch{return false;}});
+  function onLogin(){try{sessionStorage.setItem("cg_auth","1");}catch{}setAutenticado(true);}
+  if(!autenticado)return<LoginGate onLogin={onLogin}/>;
+
   const [foco,setFoco]=useState("Sites de clínica que são vitrine parada e não captam paciente");
   const [ideias,setIdeias]=useState([]);
   const [ideiaSel,setIdeiaSel]=useState(null);
