@@ -480,14 +480,14 @@ function BandEl({src,h,offsetY,mode}){
     <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:`center ${50+(offsetY||0)}%`}}/>
   </div>;
 }
-function EditableText({text,destaque,size,color,accent,field,slideIdx,editField,editVal,setEditVal,onEdit,onCommit,style={}}){
+function EditableText({text,destaque,size,color,accent,field,slideIdx,editField,editVal,setEditVal,onEdit,onCommit,bold=true,style={}}){
   const isMe=editField&&editField.slideIdx===slideIdx&&editField.field===field;
   if(isMe)return<textarea autoFocus value={editVal} onChange={e=>setEditVal(e.target.value)}
     onBlur={onCommit} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();onCommit();}}}
-    style={{width:"100%",background:"rgba(0,0,0,0.5)",border:`1px solid ${C.green}`,borderRadius:6,color:C.white,fontFamily:MONO,fontSize:size,fontWeight:700,padding:6,resize:"none",outline:"none",...style}}/>;
+    style={{width:"100%",background:"rgba(0,0,0,0.5)",border:`1px solid ${C.green}`,borderRadius:6,color:C.white,fontFamily:MONO,fontSize:size,fontWeight:bold?700:400,padding:6,resize:"none",outline:"none",...style}}/>;
   const parts=destaque?splitTitulo(text,destaque):null;
   return<div onDoubleClick={()=>onEdit(slideIdx,field)} title="Duplo clique para editar"
-    style={{cursor:"text",fontFamily:MONO,fontWeight:700,fontSize:size,lineHeight:1.12,color,textWrap:"balance",...style}}>
+    style={{cursor:"text",fontFamily:MONO,fontWeight:bold?700:400,fontSize:size,lineHeight:bold?1.12:1.5,color,textWrap:bold?"balance":"pretty",...style}}>
     {parts?parts.map((p,i)=><span key={i} style={p.hi?{fontStyle:"italic",color:accent||color}:undefined}>{p.t}</span>):(text||<span style={{opacity:0.3,fontStyle:"italic"}}>vazio</span>)}
   </div>;
 }
@@ -503,7 +503,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
   const titleAccent=img&&(lay===0||lay===2)?C.green:accent;
 
   const titleEl=<EditableText text={slide.titulo} destaque={slide.destaque} size={28} color={titleColor} accent={titleAccent} field="titulo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>;
-  const corpoEl=slide.corpo?<EditableText text={slide.corpo} size={14} color={img?"rgba(255,255,255,.8)":(light?"rgba(0,0,0,.6)":"rgba(255,255,255,.7)")} field="corpo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{marginTop:10}}/>:null;
+  const corpoEl=slide.corpo?<EditableText text={slide.corpo} size={12} color={img?"rgba(255,255,255,.8)":(light?"rgba(0,0,0,.6)":"rgba(255,255,255,.7)")} bold={false} field="corpo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{marginTop:10}}/>:null;
   const footEl=<Foot light={!img&&light} accent={img&&(lay===0||lay===2)?C.green:accent} label={pg(idx,total)}/>;
 
   if(lay===2)return(
@@ -570,7 +570,7 @@ function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,o
   const titleColor=light?C.black:C.white;
 
   const titleEl=<EditableText text={slide.titulo} destaque={slide.destaque} size={20} color={titleColor} accent={accent} field="titulo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>;
-  const corpoEl2=slide.corpo?<EditableText text={slide.corpo} size={14} color={cc} field="corpo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{marginTop:11}}/>:null;
+  const corpoEl2=slide.corpo?<EditableText text={slide.corpo} size={12} color={cc} bold={false} field="corpo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{marginTop:11}}/>:null;
   const punchEl2=slide.punchline?<EditablePunch text={slide.punchline} accent={accent} light={light} field="punchline" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>:null;
 
   if(img&&pos==="bg")return(
