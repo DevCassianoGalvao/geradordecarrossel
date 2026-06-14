@@ -264,24 +264,18 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
   async function gerarLegenda(){
     if(!slides.length)return;
     setLegendaBusy(true);
-    const isEstetica=/est.t|harmoniz|dermat|pl.st|skin|beleza/i.test((imgDir||"")+foco);
+    const isEstetica=/harmoniz|dermat|estetica|skin|beleza/i.test((imgDir||"")+foco);
     const tipoNicho=isEstetica?"clinicas de estetica e harmonizacao":"medicos e profissionais de saude";
+    const resumo=slides.map((s,i)=>String(i+1)+". "+s.titulo+(s.punchline?" | "+s.punchline:"")).join(" / ");
+    const prompt=[
+      "Crie uma legenda de Instagram para um carrossel.",
+      "TEMA: "+foco,
+      "SLIDES: "+resumo,
+      "PUBLICO: "+tipoNicho,
+      "REGRAS: primeira linha de impacto, 2-3 paragrafos curtos em primeira pessoa, CTA no final, linha separadora, 15-20 hashtags misturadas (nicho grande + especificas + #webdesign #marketingmedico #siteparaclinica #captacaodepacientes). Tom direto, humano. Retorne APENAS a legenda pronta."
+    ].join(" / ");
     try{
-      const resumo=slides.map((s,i)=>(i+1)+". "+s.titulo+(s.punchline?" | "+s.punchline:"")).join("
-");
-      const out=await askClaude("Crie uma legenda de Instagram para um carrossel.
-TEMA: "+foco+"
-SLIDES:
-"+resumo+"
-PUBLICO: "+tipoNicho+"
-
-REGRAS:
-- Primeira linha: frase de impacto
-- 2-3 paragrafos curtos, voz de autoridade, primeira pessoa
-- CTA claro no final
-- Linha separadora
-- 15 a 20 hashtags: grandes do nicho, especificas, posicionamento (#webdesign #marketingmedico #siteparaclinica #captacaodepacientes)
-Tom direto, humano. Retorne APENAS a legenda pronta.");
+      const out=await askClaude(prompt);
       setLegenda(out.trim());
     }catch(e){setErro("Legenda erro: "+e.message);}
     finally{setLegendaBusy(false);}
