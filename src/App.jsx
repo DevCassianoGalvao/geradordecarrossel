@@ -145,7 +145,7 @@ export default function App(){
       const out=await askClaude(`${ctx()}\n${HOOK_CAPA}\n${objInstr}\nTAREFA: carrossel completo sobre: Título "${ideia.titulo}" | Ângulo "${ideia.angulo}".\n1 CAPA + 4-5 CONTEÚDO + 1 CTA. Cada slide: "tipo"(capa|conteudo|cta),"titulo","destaque"(palavra do título),"corpo"(1-2 frases ou ""),"punchline"(frase memorável ou "").\nAPENAS JSON: {"isca":"","slides":[{"tipo":"capa","titulo":"","destaque":"","corpo":"","punchline":""}]}`);
       const d=parseJSON(out);
       const obj=Array.isArray(d)?{isca:"",slides:d}:d;
-      const arr=(obj.slides||[]).map(s=>({...s,bgImage:null,imgMode:"foto",imgPos:"top",imgOffsetY:0,coverLayout:capaPadrao,image_prompt:""}));
+      const arr=(obj.slides||[]).map((s,si)=>({...s,bgImage:null,imgMode:"foto",imgPos:"top",imgOffsetY:0,coverLayout:capaPadrao,image_prompt:"",typo:{ts:si===0?28:20,tw:700,bs:12,bw:400,blh:1.5,ps:12,pw:700}}));
       setIsca(obj.isca||"");setSlides(arr);
     }catch(e){setErro(e.message);}finally{setCarregando("");}
   }
@@ -409,6 +409,8 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
               )}
             </div>
 
+            <TypoPanel slide={slide} idx={idx} setSlides={setSlides}/>
+
             <div style={St.promptBox}>
               <div style={St.promptHead}>
                 PROMPT · slide {idx+1}
@@ -462,10 +464,10 @@ function Foot({light,accent,label}){
     <span>{HANDLE}</span><span style={{color:accent,fontStyle:"italic"}}>{label}</span>
   </div>;
 }
-function EditablePunch({text,accent,light,field,slideIdx,editField,editVal,setEditVal,onEdit,onCommit}){
+function EditablePunch({text,accent,light,size=12,weight=700,field,slideIdx,editField,editVal,setEditVal,onEdit,onCommit}){
   const isMe=editField&&editField.slideIdx===slideIdx&&editField.field===field;
   if(isMe)return<div style={{borderLeft:`3px solid ${accent}`,paddingLeft:11,marginBottom:12}}><textarea autoFocus value={editVal} onChange={e=>setEditVal(e.target.value)} onBlur={onCommit} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();onCommit();}}} style={{width:"100%",background:"rgba(0,0,0,0.5)",border:`1px solid ${accent}`,borderRadius:6,color:C.white,fontFamily:MONO,fontSize:14,fontWeight:700,padding:4,resize:"none",outline:"none"}}/></div>;
-  return<div onDoubleClick={()=>onEdit(slideIdx,field)} title="Duplo clique para editar" style={{borderLeft:`3px solid ${accent}`,paddingLeft:11,fontSize:14,fontWeight:700,lineHeight:1.4,color:light?C.black:C.white,marginBottom:12,cursor:"text",textWrap:"pretty"}}>{widow(text)}</div>;
+  return<div onDoubleClick={()=>onEdit(slideIdx,field)} title="Duplo clique para editar" style={{borderLeft:`3px solid ${accent}`,paddingLeft:11,fontSize:size,fontWeight:weight,lineHeight:1.4,color:light?C.black:C.white,marginBottom:12,cursor:"text",textWrap:"pretty"}}>{widow(text)}</div>;
 }
 function PunchEl({txt,accent,light}){
   return<div style={{borderLeft:`3px solid ${accent}`,paddingLeft:11,fontSize:14,fontWeight:700,lineHeight:1.4,color:light?C.black:C.white,marginBottom:12,textWrap:"pretty"}}>{widow(txt)}</div>;
@@ -480,14 +482,14 @@ function BandEl({src,h,offsetY,mode}){
     <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:`center ${50+(offsetY||0)}%`}}/>
   </div>;
 }
-function EditableText({text,destaque,size,color,accent,field,slideIdx,editField,editVal,setEditVal,onEdit,onCommit,bold=true,style={}}){
+function EditableText({text,destaque,size,color,accent,field,slideIdx,editField,editVal,setEditVal,onEdit,onCommit,bold=true,lh,style={}}){
   const isMe=editField&&editField.slideIdx===slideIdx&&editField.field===field;
   if(isMe)return<textarea autoFocus value={editVal} onChange={e=>setEditVal(e.target.value)}
     onBlur={onCommit} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();onCommit();}}}
     style={{width:"100%",background:"rgba(0,0,0,0.5)",border:`1px solid ${C.green}`,borderRadius:6,color:C.white,fontFamily:MONO,fontSize:size,fontWeight:bold?700:400,padding:6,resize:"none",outline:"none",...style}}/>;
   const parts=destaque?splitTitulo(text,destaque):null;
   return<div onDoubleClick={()=>onEdit(slideIdx,field)} title="Duplo clique para editar"
-    style={{cursor:"text",fontFamily:MONO,fontWeight:bold?700:400,fontSize:size,lineHeight:bold?1.12:1.5,color,textWrap:bold?"balance":"pretty",...style}}>
+    style={{cursor:"text",fontFamily:MONO,fontWeight:bold?700:400,fontSize:size,lineHeight:lh||(bold?1.12:1.5),color,textWrap:bold?"balance":"pretty",...style}}>
     {parts?parts.map((p,i)=><span key={i} style={p.hi?{fontStyle:"italic",color:accent||color}:undefined}>{p.t}</span>):(text||<span style={{opacity:0.3,fontStyle:"italic"}}>vazio</span>)}
   </div>;
 }
@@ -502,8 +504,9 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
   const titleColor=img&&(lay===0||lay===2)?C.white:fg;
   const titleAccent=img&&(lay===0||lay===2)?C.green:accent;
 
-  const titleEl=<EditableText text={slide.titulo} destaque={slide.destaque} size={28} color={titleColor} accent={titleAccent} field="titulo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>;
-  const corpoEl=slide.corpo?<EditableText text={slide.corpo} size={12} color={img?"rgba(255,255,255,.8)":(light?"rgba(0,0,0,.6)":"rgba(255,255,255,.7)")} bold={false} field="corpo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{marginTop:10}}/>:null;
+  const tp=slide.typo||{ts:28,tw:700,bs:12,bw:400,blh:1.5,ps:12,pw:700};
+  const titleEl=<EditableText text={slide.titulo} destaque={slide.destaque} size={tp.ts} color={titleColor} accent={titleAccent} field="titulo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>;
+  const corpoEl=slide.corpo?<EditableText text={slide.corpo} size={tp.bs} color={img?"rgba(255,255,255,.8)":(light?"rgba(0,0,0,.6)":"rgba(255,255,255,.7)")} bold={tp.bw>=700} lh={tp.blh} field="corpo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{marginTop:10}}/>:null;
   const footEl=<Foot light={!img&&light} accent={img&&(lay===0||lay===2)?C.green:accent} label={pg(idx,total)}/>;
 
   if(lay===2)return(
@@ -569,9 +572,10 @@ function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,o
   const cc=light?"rgba(0,0,0,.65)":"rgba(255,255,255,.74)";
   const titleColor=light?C.black:C.white;
 
-  const titleEl=<EditableText text={slide.titulo} destaque={slide.destaque} size={20} color={titleColor} accent={accent} field="titulo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>;
-  const corpoEl2=slide.corpo?<EditableText text={slide.corpo} size={12} color={cc} bold={false} field="corpo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{marginTop:11}}/>:null;
-  const punchEl2=slide.punchline?<EditablePunch text={slide.punchline} accent={accent} light={light} field="punchline" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>:null;
+  const tp=slide.typo||{ts:20,tw:700,bs:12,bw:400,blh:1.5,ps:12,pw:700};
+  const titleEl=<EditableText text={slide.titulo} destaque={slide.destaque} size={tp.ts} color={titleColor} accent={accent} field="titulo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>;
+  const corpoEl2=slide.corpo?<EditableText text={slide.corpo} size={tp.bs} color={cc} bold={tp.bw>=700} lh={tp.blh} field="corpo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{marginTop:11}}/>:null;
+  const punchEl2=slide.punchline?<EditablePunch text={slide.punchline} accent={accent} light={light} size={tp.ps} weight={tp.pw} field="punchline" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>:null;
 
   if(img&&pos==="bg")return(
     <div style={cardBase(light)}>
@@ -734,6 +738,38 @@ async function renderSlideToPNG(slide,i,total,estilo,perfil){
     ctx.fillStyle=accent;const pgStr=pg(i,total);ctx.fillText(pgStr,W-pad-ctx.measureText(pgStr).width,footY+10*k);
     return cv.toDataURL("image/png");
   }catch(e){console.error(e);return null;}
+}
+
+
+function TypoPanel({slide,idx,setSlides}){
+  const t=slide.typo||{ts:20,tw:700,bs:12,bw:400,blh:1.5,ps:12,pw:700};
+  const upd=(k,v)=>setSlides(p=>p.map((s,i)=>i===idx?{...s,typo:{...s.typo,[k]:v}}:s));
+  const row=(label,field,min,max,step,isWeight)=>(
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+      <span style={{fontSize:10,color:C.dim,width:90,flexShrink:0}}>{label}</span>
+      {isWeight
+        ?<div style={{display:"flex",gap:4}}>
+          {[400,500,700].map(w=><button key={w} onClick={()=>upd(field,w)} style={{...St.posBtn,fontSize:10,padding:"3px 8px",background:t[field]===w?C.green:"transparent",color:t[field]===w?C.black:C.white}}>{w}</button>)}
+        </div>
+        :<><input type="range" min={min} max={max} step={step} value={t[field]} onChange={e=>upd(field,Number(e.target.value))} style={{flex:1,accentColor:C.green}}/><span style={{fontSize:10,color:C.white,minWidth:28}}>{t[field]}</span></>
+      }
+    </div>
+  );
+  return(
+    <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:11,padding:12,marginTop:0}}>
+      <div style={{fontSize:10,letterSpacing:"0.1em",color:C.dim,marginBottom:10}}>TIPOGRAFIA · slide {idx+1}</div>
+      <div style={{fontSize:10,color:C.green,marginBottom:4}}>Título</div>
+      {row("Tamanho",      "ts",  14,40,1,false)}
+      {row("Peso",         "tw",  400,700,100,true)}
+      <div style={{fontSize:10,color:C.green,marginBottom:4,marginTop:6}}>Corpo</div>
+      {row("Tamanho",      "bs",  10,22,1,false)}
+      {row("Peso",         "bw",  400,700,100,true)}
+      {row("Line height",  "blh", 1.2,2.2,0.05,false)}
+      <div style={{fontSize:10,color:C.green,marginBottom:4,marginTop:6}}>Punchline</div>
+      {row("Tamanho",      "ps",  10,22,1,false)}
+      {row("Peso",         "pw",  400,700,100,true)}
+    </div>
+  );
 }
 
 // ===== ESTILOS =====
