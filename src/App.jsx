@@ -682,7 +682,7 @@ const St={
   targetBtn:{flex:1,border:`1px solid ${C.line}`,borderRadius:7,padding:"6px 10px",fontFamily:MONO,fontSize:12,fontWeight:700,cursor:"pointer"},
   chatLog:{maxHeight:90,overflowY:"auto",marginBottom:8,display:"flex",flexDirection:"column",gap:4},
   chatMsg:{fontSize:12,lineHeight:1.4},
-  erro:{background:"rgba(137,40,255,0.12)",border:`1px solid ${C.purple}`,borderRadius:8,padding:10,fontSize:13}},
+  erro:{background:"rgba(137,40,255,0.12)",border:`1px solid ${C.purple}`,borderRadius:8,padding:10,fontSize:13},
   previewBar:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8},
   styleSwitch:{display:"inline-flex",background:C.panel,border:`1px solid ${C.line}`,borderRadius:8,padding:3,gap:3},
   styleBtn:{border:"none",borderRadius:6,padding:"6px 10px",fontFamily:MONO,fontSize:13,fontWeight:700,cursor:"pointer"},
