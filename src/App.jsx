@@ -317,33 +317,50 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
       if(!node)return null;
       await loadLib("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js","html2canvas");
 
-      // Convert each <img> into a <div> with background-image so html2canvas
-      // honors object-fit:cover and object-position correctly.
+      // For each <img>, pre-render a correctly-cropped copy at full resolution
+      // onto an offscreen canvas, then swap the src. This preserves object-fit
+      // AND keeps the element in the exact same DOM position (no layout shift).
       const imgs=Array.from(node.querySelectorAll("img"));
       const swaps=[];
-      imgs.forEach(img=>{
+      for(const img of imgs){
         const ps=window.getComputedStyle(img);
-        const div=document.createElement("div");
-        div.style.width=ps.width;
-        div.style.height=ps.height;
-        div.style.backgroundImage="url("+img.src+")";
-        div.style.backgroundSize=(ps.objectFit==="contain")?"contain":"cover";
-        div.style.backgroundPosition=ps.objectPosition||"center";
-        div.style.backgroundRepeat="no-repeat";
-        div.style.borderRadius=ps.borderRadius;
-        div.style.flexShrink=ps.flexShrink;
-        div.style.filter=ps.filter;
-        div.style.display=ps.display==="inline"?"block":ps.display;
-        img.parentNode.insertBefore(div,img);
-        img.style.display="none";
-        swaps.push({img,div});
-      });
+        const w=img.offsetWidth, h=img.offsetHeight;
+        if(!w||!h||!img.naturalWidth){continue;}
+        const fit=ps.objectFit;
+        const SC=3; // supersample for quality
+        const cv=document.createElement("canvas");
+        cv.width=w*SC; cv.height=h*SC;
+        const ctx=cv.getContext("2d");
+        ctx.imageSmoothingQuality="high";
+        const iw=img.naturalWidth, ih=img.naturalHeight;
+        const opParts=(ps.objectPosition||"50% 50%").split(" ");
+        const opx=(parseFloat(opParts[0])||50)/100;
+        const opy=(parseFloat(opParts[1])||50)/100;
+        if(fit==="contain"){
+          const s=Math.min(w/iw,h/ih);
+          const dw=iw*s, dh=ih*s;
+          ctx.drawImage(img,((w-dw)*opx)*SC,((h-dh)*opy)*SC,dw*SC,dh*SC);
+        }else{ // cover (default)
+          const s=Math.max(w/iw,h/ih);
+          const dw=iw*s, dh=ih*s;
+          ctx.drawImage(img,((w-dw)*opx)*SC,((h-dh)*opy)*SC,dw*SC,dh*SC);
+        }
+        const newSrc=cv.toDataURL("image/png");
+        swaps.push({img,oldSrc:img.src,oldFit:img.style.objectFit,oldPos:img.style.objectPosition});
+        img.src=newSrc;
+        img.style.objectFit="fill";
+        img.style.objectPosition="center";
+      }
+      // wait for new srcs to decode
+      await Promise.all(imgs.map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve()));
 
       // Remove rounded corners for Instagram (square export)
       const origRadius=node.style.borderRadius;
       const origShadow=node.style.boxShadow;
+      const origBorder=node.style.border;
       node.style.borderRadius="0";
       node.style.boxShadow="none";
+      node.style.border="none";
 
       let dataUrl=null;
       try{
@@ -353,10 +370,10 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
         });
         dataUrl=canvas.toDataURL("image/png");
       }finally{
-        // Restore everything
         node.style.borderRadius=origRadius;
         node.style.boxShadow=origShadow;
-        swaps.forEach(({img,div})=>{img.style.display="";div.parentNode.removeChild(div);});
+        node.style.border=origBorder;
+        swaps.forEach(({img,oldSrc,oldFit,oldPos})=>{img.src=oldSrc;img.style.objectFit=oldFit;img.style.objectPosition=oldPos;});
       }
       return dataUrl;
     }finally{
