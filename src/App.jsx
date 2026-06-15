@@ -79,16 +79,22 @@ function sortidoEff(slide,idx){
 function widow(s){if(!s)return s;const i=s.lastIndexOf(" ");return i>0?s.slice(0,i)+"\u00A0"+s.slice(i+1):s;}
 
 class ErrorBoundary extends React.Component {
-  constructor(props){super(props);this.state={error:null};}
+  constructor(props){super(props);this.state={error:null,info:null};}
   static getDerivedStateFromError(e){return{error:e};}
+  componentDidCatch(e,info){this.setState({error:e,info:info});}
   render(){
-    if(this.state.error)return(
-      <div style={{padding:20,color:"#00EF9E",fontFamily:"monospace",background:"#000",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-        <div style={{fontSize:14,marginBottom:12}}>Erro encontrado — recarregue a pagina</div>
-        <div style={{fontSize:11,opacity:0.6,maxWidth:400,textAlign:"center"}}>{this.state.error.message}</div>
-        <button onClick={()=>window.location.reload()} style={{marginTop:16,background:"#00EF9E",color:"#000",border:"none",borderRadius:8,padding:"10px 20px",fontFamily:"monospace",cursor:"pointer"}}>Recarregar</button>
-      </div>
-    );
+    if(this.state.error){
+      const msg=this.state.error&&this.state.error.message?this.state.error.message:String(this.state.error);
+      const stack=this.state.info&&this.state.info.componentStack?this.state.info.componentStack.slice(0,300):"";
+      return(
+        <div style={{padding:24,color:"#00EF9E",fontFamily:"monospace",background:"#000",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12}}>
+          <div style={{fontSize:15,fontWeight:700}}>Erro — recarregue a pagina</div>
+          <div style={{fontSize:12,opacity:0.8,maxWidth:500,textAlign:"center",background:"#0d0d10",padding:12,borderRadius:8,border:"1px solid #8928FF"}}>{msg}</div>
+          {stack&&<div style={{fontSize:10,opacity:0.5,maxWidth:500,whiteSpace:"pre-wrap"}}>{stack}</div>}
+          <button onClick={()=>window.location.reload()} style={{background:"#00EF9E",color:"#000",border:"none",borderRadius:8,padding:"10px 24px",fontFamily:"monospace",fontSize:13,fontWeight:700,cursor:"pointer"}}>Recarregar</button>
+        </div>
+      );
+    }
     return this.props.children;
   }
 }
