@@ -49,7 +49,7 @@ const OBJETIVOS = {
 async function askClaude(prompt) {
   const r = await fetch("/api/claude", {
     method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:1200, messages:[{role:"user",content:prompt}] }),
+    body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:2000, messages:[{role:"user",content:prompt}] }),
   });
   if (!r.ok) throw new Error("Falha na chamada (" + r.status + ")");
   const data = await r.json();
@@ -77,6 +77,103 @@ function sortidoEff(slide,idx){
   return seq[idx%seq.length]?"light":"dark";
 }
 function widow(s){if(!s)return s;const i=s.lastIndexOf(" ");return i>0?s.slice(0,i)+"\u00A0"+s.slice(i+1):s;}
+
+// ===== PADR\u00D5ES DE FUNDO =====
+const PATTERN_NAMES={
+  glow:"Glow",glow2:"Glow Alt",grid:"Grid",diagonal:"Diagonal",
+  dots:"Pontos",waves:"Ondas",zigzag:"Zigzag",scanlines:"Scanlines",
+  circuit:"Circuito",minimal:"Minimal",
+  corners:"Cantos",radial:"Radial",crosshatch:"Hachura",checker:"Xadrez"
+};
+function BgDecor({pattern,light}){
+  if(light)return null;
+  if(!pattern||pattern==="minimal")return null;
+  const abs={position:"absolute",pointerEvents:"none",zIndex:0};
+  if(pattern==="glow")return(<>
+    <div style={{...abs,width:230,height:230,background:`radial-gradient(circle,${C.purple},transparent 70%)`,opacity:.6,filter:"blur(11px)",mixBlendMode:"screen",top:-55,left:-45}}/>
+    <div style={{...abs,width:230,height:230,background:`radial-gradient(circle,${C.green},transparent 70%)`,opacity:.32,filter:"blur(11px)",mixBlendMode:"screen",bottom:-75,right:-55}}/>
+  </>);
+  if(pattern==="glow2")return(<>
+    <div style={{...abs,width:230,height:230,background:`radial-gradient(circle,${C.green},transparent 70%)`,opacity:.45,filter:"blur(11px)",mixBlendMode:"screen",top:-55,right:-45}}/>
+    <div style={{...abs,width:230,height:230,background:`radial-gradient(circle,${C.purple},transparent 70%)`,opacity:.35,filter:"blur(11px)",mixBlendMode:"screen",bottom:-75,left:-55}}/>
+  </>);
+  if(pattern==="grid")return <div style={{...abs,inset:0,backgroundImage:"linear-gradient(rgba(255,255,255,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.05) 1px,transparent 1px)",backgroundSize:"34px 34px"}}/>;
+  if(pattern==="diagonal")return <div style={{...abs,inset:0,backgroundImage:"repeating-linear-gradient(45deg,rgba(255,255,255,0.035) 0px,rgba(255,255,255,0.035) 1px,transparent 1px,transparent 22px)"}}/>;
+  if(pattern==="dots")return <div style={{...abs,inset:0,backgroundImage:"radial-gradient(rgba(255,255,255,0.14) 1.2px,transparent 1.2px)",backgroundSize:"22px 22px"}}/>;
+  if(pattern==="waves")return(
+    <svg style={{...abs,inset:0,width:"100%",height:"100%",opacity:.09}} preserveAspectRatio="none" viewBox="0 0 340 425">
+      {Array.from({length:14},(_,i)=>{const y=20+i*32;return<path key={i} d={`M0,${y} Q85,${y-18} 170,${y} T340,${y}`} stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" fill="none"/>;})}
+    </svg>
+  );
+  if(pattern==="zigzag")return(
+    <svg style={{...abs,inset:0,width:"100%",height:"100%",opacity:.08}} preserveAspectRatio="none" viewBox="0 0 340 425">
+      {Array.from({length:7},(_,i)=>{const y=40+i*60;let d=`M0,${y}`;for(let j=1;j<=18;j++)d+=` L${j*19},${j%2===0?y:y-24}`;return<path key={i} d={d} stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" fill="none"/>;})}
+    </svg>
+  );
+  if(pattern==="scanlines")return <div style={{...abs,inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,0.025) 3px,rgba(255,255,255,0.025) 4px)"}}/>;
+  if(pattern==="circuit")return(
+    <svg style={{...abs,inset:0,width:"100%",height:"100%",opacity:.09}} viewBox="0 0 340 425">
+      <path d="M20,50 H90 V90 H170 V50 H230 M230,50 H290 M290,50 V130 H210 V170 M210,170 H130 V210 H70 V250 M70,250 H150 V290 H230 V330 H310 M310,330 V370 H250 M250,370 H170 V410 M170,410 H90" stroke="rgba(255,255,255,0.65)" strokeWidth="1.2" fill="none"/>
+      <path d="M90,50 V20 H180 V50 M310,130 H340 M70,250 V220 H20" stroke="rgba(255,255,255,0.4)" strokeWidth="1" fill="none"/>
+      {[[90,50],[170,50],[210,170],[70,250],[230,330],[170,410]].map(([cx,cy],i)=><circle key={i} cx={cx} cy={cy} r="3.5" fill="rgba(255,255,255,0.5)"/>)}
+    </svg>
+  );
+  if(pattern==="corners")return(
+    <svg style={{...abs,inset:0,width:"100%",height:"100%",opacity:.18}} viewBox="0 0 340 425">
+      <path d="M10,65 L10,10 L65,10 M275,10 L330,10 L330,65 M330,360 L330,415 L275,415 M65,415 L10,415 L10,360" stroke="white" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+    </svg>
+  );
+  if(pattern==="radial")return(
+    <svg style={{...abs,inset:0,width:"100%",height:"100%",opacity:.07}} viewBox="0 0 340 425">
+      {[45,90,135,180,230,280,330].map((r,i)=><circle key={i} cx="170" cy="212" r={r} stroke="white" strokeWidth="1" fill="none"/>)}
+    </svg>
+  );
+  if(pattern==="crosshatch")return <div style={{...abs,inset:0,backgroundImage:"repeating-linear-gradient(45deg,rgba(255,255,255,0.03) 0,rgba(255,255,255,0.03) 1px,transparent 0,transparent 50%),repeating-linear-gradient(-45deg,rgba(255,255,255,0.03) 0,rgba(255,255,255,0.03) 1px,transparent 0,transparent 50%)",backgroundSize:"20px 20px"}}/>;
+  if(pattern==="checker")return <div style={{...abs,inset:0,backgroundImage:"linear-gradient(45deg,rgba(255,255,255,0.025) 25%,transparent 25%),linear-gradient(-45deg,rgba(255,255,255,0.025) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,rgba(255,255,255,0.025) 75%),linear-gradient(-45deg,transparent 75%,rgba(255,255,255,0.025) 75%)",backgroundSize:"24px 24px",backgroundPosition:"0 0,0 12px,12px -12px,-12px 0"}}/>;
+  return null;
+}
+
+// ===== \u00CDCONES =====
+const ICONS={
+  phone:"M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.87 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.77 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z",
+  calendar:"M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z",
+  clock:"M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM12 6v6l4 2",
+  star:"M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
+  heart:"M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z",
+  check:"M20 6L9 17l-5-5",
+  "arrow-right":"M5 12h14M12 5l7 7-7 7",
+  zap:"M13 2L3 14h9l-1 8 10-12h-9l1-8z",
+  shield:"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+  trending:"M22 7l-8.5 8.5-5-5L2 17M16 7h6v6",
+  users:"M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75",
+  message:"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+  eye:"M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
+  lock:"M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM7 11V7a5 5 0 0 1 10 0v4",
+  target:"M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
+  sparkles:"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z",
+  award:"M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2zM8 21v-4M16 21v-4",
+  wifi:"M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01",
+  layers:"M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5",
+  dollar:"M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+  "credit-card":"M2 5h20v14H2zM2 10h20",
+  "bar-chart":"M18 20V10M12 20V4M6 20v-6",
+  activity:"M22 12h-4l-3 9L9 3l-3 9H2",
+  cross:"M12 5v14M5 12h14",
+  thermometer:"M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z",
+  code:"M16 18l6-6-6-6M8 6l-6 6 6 6",
+  terminal:"M4 17l6-6-6-6M12 19h8",
+  database:"M21 5c0-1.66-4.03-3-9-3S3 3.34 3 5M21 5v14c0 1.66-4.03 3-9 3S3 20.66 3 19V5M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12",
+  cpu:"M18 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM9 9h6v6H9zM9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2",
+  layout:"M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM3 9h18M9 21V9",
+  pen:"M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z",
+  share:"M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13",
+  scissors:"M3 6a3 3 0 1 0 6 0 3 3 0 1 0-6 0M15 6a3 3 0 1 0 6 0 3 3 0 1 0-6 0M5 9l14 6M19 9L5 15",
+  "plus-circle":"M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM12 8v8M8 12h8",
+};
+function Icon({name,size=24,color="currentColor",style={}}){
+  const d=ICONS[name];if(!d)return null;
+  return<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d={d}/></svg>;
+}
 
 class ErrorBoundary extends React.Component {
   constructor(props){super(props);this.state={error:null,info:null};}
@@ -139,6 +236,10 @@ export default function App(){
   const [autenticado,setAutenticado]=useState(()=>{try{return sessionStorage.getItem("cg_auth")==="1";}catch{return false;}});
   function onLogin(){try{sessionStorage.setItem("cg_auth","1");}catch{}setAutenticado(true);}
   if(!autenticado)return<LoginGate onLogin={onLogin}/>;
+  return<AppContent/>;
+}
+
+function AppContent(){
 
   const [foco,setFoco]=useState("Sites de clínica que são vitrine parada e não captam paciente");
   const [ideias,setIdeias]=useState([]);
@@ -168,6 +269,8 @@ export default function App(){
   const [exportBusy,setExportBusy]=useState(false);
   const [legenda,setLegenda]=useState("");
   const [legendaBusy,setLegendaBusy]=useState(false);
+  const [bgPattern,setBgPattern]=useState("glow");
+  const [showIconPicker,setShowIconPicker]=useState(false);
   const slideRef=useRef(null);
 
   const ctx=()=>CONTEXTO+(copyInstr?"\n\nINSTRUÇÕES EXTRAS:\n"+copyInstr:"")+"\n\n"+ANTI_IA;
@@ -205,10 +308,10 @@ export default function App(){
       historia:"OBJETIVO HISTÓRIA: conte situação real. Capa apresenta problema, meio conta o que aconteceu, CTA convida conversa.",
     }[objetivo]||"";
     try{
-      const out=await askClaude(`${ctx()}\n${HOOK_CAPA}\n${objInstr}\nTAREFA: carrossel completo sobre: Título "${ideia.titulo}" | Ângulo "${ideia.angulo}".\n1 CAPA + 4-5 CONTEÚDO + 1 CTA. Cada slide: "tipo"(capa|conteudo|cta),"titulo","destaque"(palavra do título),"corpo"(1-2 frases ou ""),"punchline"(frase memorável ou "").\nAPENAS JSON: {"isca":"","slides":[{"tipo":"capa","titulo":"","destaque":"","corpo":"","punchline":""}]}`);
+      const out=await askClaude(`${ctx()}\n${HOOK_CAPA}\n${objInstr}\nTAREFA: carrossel completo sobre: Título "${ideia.titulo}" | Ângulo "${ideia.angulo}".\n1 CAPA + 4-5 CONTEÚDO + 1 CTA. Cada slide: "tipo"(capa|conteudo|cta),"titulo","destaque"(palavra do título),"corpo"(1-2 frases ou ""),"punchline"(frase memorável ou ""),"label"(2-3 palavras CAPS p/ rótulo acima do título — varie: "A VIRADA","O CUSTO","A PERGUNTA","O DIAGNÓSTICO","O PROBLEMA","A SOLUÇÃO","O CASO","O CONVITE" — nunca repita).\nAPENAS JSON: {"isca":"","slides":[{"tipo":"capa","titulo":"","destaque":"","corpo":"","punchline":"","label":""}]}`);
       const d=parseJSON(out);
       const obj=Array.isArray(d)?{isca:"",slides:d}:d;
-      const arr=(obj.slides||[]).map((s,si)=>({...s,bgImage:null,imgMode:"foto",imgPos:"top",imgOffsetY:0,coverLayout:capaPadrao,image_prompt:"",typo:{ts:si===0?28:20,tw:700,bs:12,bw:400,blh:1.5,ps:12,pw:700}}));
+      const arr=(obj.slides||[]).map((s,si)=>({...s,bgImage:null,imgMode:"foto",imgPos:"top",imgOffsetY:0,imgOffsetX:0,imgScale:1,coverLayout:capaPadrao,image_prompt:"",icon:null,imgBandH:90,typo:{ts:si===0?28:20,tw:700,bs:11,bw:400,blh:1.5,ps:11,pw:700}}));
       setIsca(obj.isca||"");setSlides(arr);
     }catch(e){setErro(e.message);}finally{setCarregando("");}
   }
@@ -518,9 +621,16 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
               <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
                 <button style={St.btnGhost} onClick={()=>copiar(slides.map((s,i)=>`SLIDE ${i+1}\n${s.titulo}\n${s.corpo||""}\n${s.punchline?"» "+s.punchline:""}`).join("\n\n"))}>Copiar</button>
                 <button style={St.btnGhost} onClick={exportarRoteiro}>Roteiro</button>
-                <button style={{...St.btnGhost,color:C.green,borderColor:C.green}} onClick={exportarZip} disabled={exportBusy}>{exportBusy?"Gerando ZIP…":"⬇ ZIP"}</button>
+                <button style={{...St.btnGhost}} onClick={exportarPNG} disabled={exportBusy}>⬇ PNG</button>
+                <button style={{...St.btnGhost,color:C.green,borderColor:C.green}} onClick={exportarZip} disabled={exportBusy}>{exportBusy?"Gerando…":"⬇ ZIP"}</button>
               </div>
             )}
+          </div>
+          {/* Seletor de padrão de fundo */}
+          <div style={{display:"flex",gap:4,flexWrap:"wrap",padding:"6px 0"}}>
+            {Object.entries(PATTERN_NAMES).map(([k,l])=>(
+              <button key={k} onClick={()=>setBgPattern(k)} style={{background:bgPattern===k?C.purple:"transparent",color:bgPattern===k?C.white:C.dim,border:`1px solid ${bgPattern===k?C.purple:C.line}`,borderRadius:6,padding:"3px 8px",fontFamily:MONO,fontSize:10,cursor:"pointer"}}>{l}</button>
+            ))}
           </div>
 
           {isca&&<div style={{background:"rgba(0,239,158,0.08)",border:`1px solid ${C.green}`,borderRadius:9,padding:"9px 13px",fontSize:12}}><b style={{color:C.green}}>Isca:</b> {isca}</div>}
@@ -528,7 +638,7 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
           <div style={{...St.stage,background:"#0d0d10"}}>
             {carregando==="carrossel"&&<div style={{...St.placeholder,color:"#00EF9E"}}>Montando o carrossel…</div>}
             {!slide&&carregando!=="carrossel"&&<div style={St.placeholder}>{ideias.length===0?"Passo 01: foco e gere ideias.":"Passo 02: escolha e confirme um ângulo."}</div>}
-            {slide&&<div ref={slideRef} data-cap="1"><Slide slide={slide} estilo={estilo} idx={idx} total={slides.length} perfil={perfil} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={startEdit} onCommit={commitEdit}/></div>}
+            {slide&&<div ref={slideRef} data-cap="1"><Slide slide={slide} estilo={estilo} idx={idx} total={slides.length} perfil={perfil} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={startEdit} onCommit={commitEdit} bgPattern={bgPattern}/></div>}
           </div>
 
           {slides.length>0&&(<>
@@ -547,11 +657,11 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
                   {slide.imgMode==="ilustracao"?"ilustracao ativo":"modo foto"}
                 </button>
               )}
-              {slide.bgImage&&slide.tipo!=="capa"&&slide.imgMode!=="ilustracao"&&[["top","cima"],["bottom","baixo"],["bg","fundo"]].map(([k,l])=>(
+              {slide.bgImage&&(slide.tipo!=="capa"||estilo==="twitter")&&slide.imgMode!=="ilustracao"&&[["top","cima"],["bottom","baixo"],["bg","fundo"]].map(([k,l])=>(
                 <button key={k} onClick={()=>setSlideField("imgPos",k)} style={{...St.posBtn,background:slide.imgPos===k?C.green:"transparent",color:slide.imgPos===k?C.black:C.white}}>{l}</button>
               ))}
               {slide.bgImage&&(
-                <div style={{display:"flex",gap:8,alignItems:"center",background:C.panel2,borderRadius:8,padding:"4px 10px"}}>
+                <div style={{display:"flex",gap:8,alignItems:"center",background:C.panel2,borderRadius:8,padding:"4px 10px",flexWrap:"wrap"}}>
                   {[["Y",slide.imgOffsetY||0,"imgOffsetY"],["X",slide.imgOffsetX||0,"imgOffsetX"]].map(([label,val,field])=>(
                     <div key={field} style={{display:"flex",alignItems:"center",gap:4}}>
                       <span style={{fontSize:9,color:C.dim,width:10}}>{label}</span>
@@ -564,6 +674,14 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
                       <span style={{fontSize:9,color:val===0?C.green:C.dim,minWidth:22}}>{val}</span>
                     </div>
                   ))}
+                  <div style={{display:"flex",alignItems:"center",gap:4}}>
+                    <span style={{fontSize:9,color:C.dim,width:14}}>Z</span>
+                    <input type="range" min="1" max="3" step="0.05" value={slide.imgScale||1}
+                      onChange={e=>setSlides(p=>p.map((s,i)=>i===idx?{...s,imgScale:Number(e.target.value)}:s))}
+                      style={{width:70,accentColor:C.purple}}/>
+                    <span style={{fontSize:9,color:(slide.imgScale||1)===1?C.green:C.dim,minWidth:28}}>{(slide.imgScale||1).toFixed(2)}x</span>
+                    {(slide.imgScale||1)>1&&<button onClick={()=>setSlides(p=>p.map((s,i)=>i===idx?{...s,imgScale:1}:s))} style={{background:"transparent",border:"none",color:C.dim,fontSize:9,cursor:"pointer",padding:0}}>↺</button>}
+                  </div>
                 </div>
               )}
               {slide.tipo==="capa"&&estilo!=="twitter"&&(
@@ -571,7 +689,35 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
                   capa ({(slide.coverLayout||0)+1}/5)
                 </button>
               )}
+              {/* Altura da faixa de imagem — conteúdo + capas com band (lay 3/4) */}
+              {slide.bgImage&&(slide.tipo!=="capa"||(slide.coverLayout===3||slide.coverLayout===4))&&(
+                <div style={{display:"flex",alignItems:"center",gap:4,background:C.panel2,borderRadius:8,padding:"4px 8px"}}>
+                  <span style={{fontSize:9,color:C.dim}}>H</span>
+                  <input type="range" min="50" max="220" value={slide.imgBandH||(slide.tipo==="capa"?150:90)} onChange={e=>setSlides(p=>p.map((s,i)=>i===idx?{...s,imgBandH:Number(e.target.value)}:s))} style={{width:60,accentColor:C.green}}/>
+                  <span style={{fontSize:9,color:C.white,minWidth:24}}>{slide.imgBandH||(slide.tipo==="capa"?150:90)}</span>
+                </div>
+              )}
+              {/* Ícone decorativo */}
+              <button style={{...St.removeImg,color:slide.icon?C.green:C.dim,borderColor:slide.icon?C.green:C.line}} onClick={()=>setShowIconPicker(v=>!v)}>
+                {slide.icon?<><Icon name={slide.icon} size={11} color={C.green}/> ícone</>:"+ ícone"}
+              </button>
+              {slide.icon&&<button style={St.removeImg} onClick={()=>setSlideField("icon",null)}>× ícone</button>}
             </div>
+            {/* Icon picker */}
+            {showIconPicker&&(
+              <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:10,padding:10}}>
+                <div style={{fontSize:9,color:C.dim,marginBottom:8,letterSpacing:"0.1em"}}>ÍCONE DECORATIVO — clique para aplicar ao slide atual</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                  {Object.keys(ICONS).map(name=>(
+                    <button key={name} title={name} onClick={()=>{setSlideField("icon",name);setShowIconPicker(false);}}
+                      style={{background:slide.icon===name?"rgba(0,239,158,0.15)":"transparent",border:`1px solid ${slide.icon===name?C.green:C.line}`,borderRadius:7,padding:"7px 10px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                      <Icon name={name} size={16} color={slide.icon===name?C.green:C.dim}/>
+                      <span style={{fontSize:8,color:C.dim,fontFamily:MONO}}>{name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <TypoPanel slide={slide} idx={idx} setSlides={setSlides}/>
 
@@ -621,11 +767,11 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
 }
 
 // ===== SLIDE RENDER =====
-function Slide({slide,estilo,idx,total,perfil,editField,editVal,setEditVal,onEdit,onCommit}){
-  if(estilo==="twitter")return<TweetSlide slide={slide} idx={idx} total={total} perfil={perfil} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>;
+function Slide({slide,estilo,idx,total,perfil,editField,editVal,setEditVal,onEdit,onCommit,bgPattern}){
+  if(estilo==="twitter")return<TweetSlide slide={slide} idx={idx} total={total} perfil={perfil} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} bgPattern={bgPattern}/>;
   const eff=estilo==="sortido"?sortidoEff(slide,idx):estilo;
-  if(slide.tipo==="capa")return<CoverSlide slide={slide} eff={eff} idx={idx} total={total} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>;
-  return<ContentSlide slide={slide} eff={eff} idx={idx} total={total} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>;
+  if(slide.tipo==="capa")return<CoverSlide slide={slide} eff={eff} idx={idx} total={total} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} bgPattern={bgPattern}/>;
+  return<ContentSlide slide={slide} eff={eff} idx={idx} total={total} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} bgPattern={bgPattern}/>;
 }
 
 const pg=(i,t)=>`${String(i+1).padStart(2,"0")} / ${String(t).padStart(2,"0")}`;
@@ -650,15 +796,33 @@ function EditablePunch({text,accent,light,size=12,weight=700,field,slideIdx,edit
 function PunchEl({txt,accent,light}){
   return<div style={{borderLeft:`3px solid ${accent}`,paddingLeft:11,fontSize:14,fontWeight:700,lineHeight:1.4,color:light?C.black:C.white,marginBottom:12,textWrap:"pretty"}}>{widow(txt)}</div>;
 }
-function BandEl({src,h,offsetY,offsetX,mode}){
+function BandEl({src,h,offsetY,offsetX,scale,mode}){
   if(mode==="ilustracao") return(
     <div style={{display:"flex",justifyContent:"center",height:h||120,flexShrink:0}}>
       <img src={src} alt="" style={{height:"100%",width:"auto",objectFit:"contain",filter:"drop-shadow(0 4px 16px rgba(0,0,0,0.5))"}}/>
     </div>
   );
-  return<div style={{borderRadius:9,overflow:"hidden",height:h||90,flexShrink:0}}>
-    <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:`${50+(offsetX||0)}% ${50+(offsetY||0)}%`}}/>
-  </div>;
+  const ms=Math.max(1.2,scale||1);
+  const base=`${(1-ms)*50}%`;
+  return(
+    <div style={{borderRadius:9,overflow:"hidden",height:h||90,flexShrink:0,position:"relative"}}>
+      <img src={src} alt="" style={{
+        position:"absolute",
+        width:`${ms*100}%`,height:`${ms*100}%`,
+        objectFit:"cover",
+        top:`calc(${base} + ${-(offsetY||0)}px)`,
+        left:`calc(${base} + ${-(offsetX||0)}px)`,
+      }}/>
+    </div>
+  );
+}
+// Imagem full-bleed com suporte a zoom (Z) e pan X/Y — usada em capas e bg
+function ImgFullBleed({src,off,offX,scale,opacity}){
+  const ms=Math.max(1.15,scale||1);
+  const base=`${(1-ms)*50}%`;
+  const st={position:"absolute",width:`${ms*100}%`,height:`${ms*100}%`,objectFit:"cover",top:`calc(${base} + ${-off}px)`,left:`calc(${base} + ${-offX}px)`};
+  if(opacity!==undefined)st.opacity=opacity;
+  return<div style={{position:"absolute",inset:0,overflow:"hidden"}}><img src={src} alt="" style={st}/></div>;
 }
 function EditableText({text,destaque,size,color,accent,field,slideIdx,editField,editVal,setEditVal,onEdit,onCommit,bold=true,lh,style={}}){
   const isMe=editField&&editField.slideIdx===slideIdx&&editField.field===field;
@@ -676,7 +840,7 @@ const imgFull={position:"absolute",inset:0,width:"100%",height:"100%",objectFit:
 const scrim={position:"absolute",inset:0,background:"linear-gradient(180deg,rgba(0,0,0,.1),rgba(0,0,0,.82))",zIndex:1};
 const padCol={position:"relative",height:"100%",padding:22,display:"flex",flexDirection:"column",boxSizing:"border-box",zIndex:2};
 
-function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onCommit}){
+function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onCommit,bgPattern}){
   const light=eff==="light",accent=light?C.purple:C.green,fg=light?C.black:C.white;
   const lay=slide.coverLayout||0,img=slide.bgImage,off=slide.imgOffsetY||0,offX=slide.imgOffsetX||0;
   const titleColor=img&&(lay===0||lay===2)?C.white:fg;
@@ -689,14 +853,14 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
 
   if(lay===2)return(
     <div style={cardBase(light)}>
-      {img&&slide.imgMode!=="ilustracao"?<><img src={img} alt="" style={{...imgFull,objectPosition:`${50+offX}% ${50+off}%`}}/><div style={scrim}/></>:<Glows/>}
+      {img&&slide.imgMode!=="ilustracao"?<><ImgFullBleed src={img} off={off} offX={offX} scale={slide.imgScale}/><div style={scrim}/></>:<BgDecor pattern={bgPattern} light={light}/>}
       {img&&slide.imgMode==="ilustracao"&&<img src={img} alt="" style={{position:"absolute",bottom:60,right:10,height:"55%",width:"auto",objectFit:"contain",filter:"drop-shadow(0 4px 20px rgba(0,0,0,0.6))",zIndex:1,pointerEvents:"none"}}/>}
       <div style={padCol}><div style={{flex:1}}/>{titleEl}<div style={{marginTop:10}}>{footEl}</div></div>
     </div>
   );
   if(lay===1)return(
     <div style={cardBase(light)}>
-      {!light&&<Glows/>}
+      {<BgDecor pattern={bgPattern} light={light}/>}
       <div style={{...padCol,paddingTop:55}}>
         {titleEl}
         {corpoEl}
@@ -706,9 +870,9 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
   );
   if(lay===3)return(
     <div style={cardBase(light)}>
-      {!light&&<Glows/>}
+      {<BgDecor pattern={bgPattern} light={light}/>}
       <div style={{...padCol,justifyContent:"space-between"}}>
-        {img&&<BandEl src={img} h={150} offsetY={off} offsetX={slide.imgOffsetX||0} mode={slide.imgMode||"foto"}/>}
+        {img&&<BandEl src={img} h={slide.imgBandH||150} offsetY={off} offsetX={slide.imgOffsetX||0} scale={slide.imgScale} mode={slide.imgMode||"foto"}/>}
         <div style={{display:"flex",flexDirection:"column",gap:10,flex:1,justifyContent:"center",paddingTop:img?12:0}}>
           {titleEl}
           {corpoEl}
@@ -719,13 +883,13 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
   );
   if(lay===4)return(
     <div style={cardBase(light)}>
-      {!light&&<Glows/>}
+      {<BgDecor pattern={bgPattern} light={light}/>}
       <div style={{...padCol,justifyContent:"space-between"}}>
         <div style={{display:"flex",flexDirection:"column",gap:10,flex:1,justifyContent:"center"}}>
           {titleEl}
           {corpoEl}
         </div>
-        {img&&<><BandEl src={img} h={150} offsetY={off} offsetX={slide.imgOffsetX||0} mode={slide.imgMode||"foto"}/><div style={{height:8}}/></>}
+        {img&&<><BandEl src={img} h={slide.imgBandH||150} offsetY={off} offsetX={slide.imgOffsetX||0} scale={slide.imgScale} mode={slide.imgMode||"foto"}/><div style={{height:8}}/></>}
         {footEl}
       </div>
     </div>
@@ -733,7 +897,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
   // lay 0 — base
   return(
     <div style={cardBase(light)}>
-      {img?<><img src={img} alt="" style={{...imgFull,objectPosition:`${50+offX}% ${50+off}%`}}/><div style={scrim}/></>:null}
+      {img?<><ImgFullBleed src={img} off={off} offX={offX} scale={slide.imgScale}/><div style={scrim}/></>:null}
       <div style={padCol}>
         <div style={{flex:1}}/>{titleEl}
         {corpoEl}
@@ -744,7 +908,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
   );
 }
 
-function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onCommit}){
+function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onCommit,bgPattern}){
   const light=eff==="light",accent=light?C.purple:C.green;
   const pos=slide.imgPos||"top",img=slide.bgImage,off=slide.imgOffsetY||0,offX=slide.imgOffsetX||0;
   const cc=light?"rgba(0,0,0,.65)":"rgba(255,255,255,.74)";
@@ -757,8 +921,8 @@ function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,o
 
   if(img&&pos==="bg")return(
     <div style={cardBase(light)}>
-      <img src={img} alt="" style={{...imgFull,opacity:light?0.15:0.28,objectPosition:`${50+offX}% ${50+off}%`}}/>
-      {!light&&<Glows/>}
+      <ImgFullBleed src={img} off={off} offX={offX} scale={slide.imgScale} opacity={light?0.15:0.28}/>
+      {<BgDecor pattern={bgPattern} light={light}/>}
       <div style={padCol}>
         {titleEl}
         {corpoEl2}
@@ -773,15 +937,16 @@ function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,o
   const hasContent=slide.corpo||slide.punchline;
   return(
     <div style={cardBase(light)}>
-      {!light&&<Glows/>}
+      {<BgDecor pattern={bgPattern} light={light}/>}
       <div style={padCol}>
-        <div style={{fontSize:9,letterSpacing:"0.11em",color:light?"rgba(0,0,0,.4)":C.dim,marginBottom:12}}>
-          <span style={{color:accent}}>—</span> {slide.tipo==="cta"?"O CONVITE":"O DIAGNÓSTICO"}
+        <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:12}}>
+          {slide.icon&&<Icon name={slide.icon} size={13} color={accent} style={{flexShrink:0,opacity:.8}}/>}
+          <EditableText text={slide.label||(slide.tipo==="cta"?"O CONVITE":"O DIAGNÓSTICO")} size={9} color={light?"rgba(0,0,0,.4)":C.dim} accent={accent} field="label" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} bold={false} lh={1} style={{letterSpacing:"0.11em",textTransform:"uppercase"}}/>
         </div>
-        {hasImg&&pos==="top"&&<div style={{marginBottom:12}}><BandEl src={img} h={90} offsetY={off}/></div>}
+        {hasImg&&pos==="top"&&<div style={{marginBottom:12}}><BandEl src={img} h={slide.imgBandH||90} offsetY={off} offsetX={offX} scale={slide.imgScale} mode={slide.imgMode||"foto"}/></div>}
         {titleEl}
         {slide.corpo?corpoEl2:(!hasContent&&<div style={{flex:1}}/>)}
-        {hasImg&&pos==="bottom"&&<div style={{marginTop:12}}><BandEl src={img} h={slide.imgMode==="ilustracao"?130:90} offsetY={off} offsetX={slide.imgOffsetX||0} mode={slide.imgMode||"foto"}/></div>}
+        {hasImg&&pos==="bottom"&&<div style={{marginTop:12}}><BandEl src={img} h={slide.imgBandH||(slide.imgMode==="ilustracao"?130:90)} offsetY={off} offsetX={offX} scale={slide.imgScale} mode={slide.imgMode||"foto"}/></div>}
         <div style={{flex:1}}/>
         {punchEl2}
         <Foot light={light} accent={accent} label={pg(idx,total)}/>
@@ -790,20 +955,43 @@ function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,o
   );
 }
 
-function TweetSlide({slide,idx,total,perfil,editField,editVal,setEditVal,onEdit,onCommit}){
-  const parts=splitTitulo(slide.titulo,slide.destaque);
+function TweetSlide({slide,idx,total,perfil,editField,editVal,setEditVal,onEdit,onCommit,bgPattern}){
+  const img=slide.bgImage,pos=slide.imgPos||"bottom",off=slide.imgOffsetY||0,offX=slide.imgOffsetX||0;
+  const ms=Math.max(1.2,slide.imgScale||1);
+  const base=`${(1-ms)*50}%`;
+  const bandImgStyle={position:"absolute",width:`${ms*100}%`,height:`${ms*100}%`,objectFit:"cover",top:`calc(${base} + ${-off}px)`,left:`calc(${base} + ${-offX}px)`};
   return(
-    <div style={{...TW.card}}>
-      <div style={TW.top}>
+    <div style={{...TW.card,position:"relative",overflow:"hidden"}}>
+      {/* fundo quando bg */}
+      {img&&pos==="bg"&&<>
+        <div style={{position:"absolute",inset:0,overflow:"hidden"}}>
+          <img src={img} alt="" style={{...bandImgStyle,opacity:.12}}/>
+        </div>
+        <div style={{position:"absolute",inset:0,background:"rgba(255,255,255,0.88)"}}/>
+      </>}
+      <div style={{...TW.top,position:"relative",zIndex:1}}>
         <div style={{...TW.avatar,backgroundImage:`url(${perfil})`,backgroundSize:"cover",backgroundPosition:"center"}}/>
-        <div><div style={TW.name}>{NOME} <span style={{color:C.purple}}>✦</span></div><div style={TW.handle}>{HANDLE}</div></div>
+        <div>
+          <div style={TW.name}>{NOME} <span style={{color:C.purple}}>✦</span></div>
+          <div style={{...TW.handle,display:"flex",alignItems:"center",gap:4}}>
+            {slide.icon&&<Icon name={slide.icon} size={11} color={C.purple} style={{opacity:.7}}/>}
+            {HANDLE}
+          </div>
+        </div>
       </div>
-      <div style={TW.body}>{parts.map((p,i)=><span key={i} style={p.hi?{color:C.purple,fontStyle:"italic"}:undefined}>{p.t}</span>)}</div>
-      {slide.bgImage&&<div style={{marginTop:10,borderRadius:12,overflow:"hidden",width:"100%",aspectRatio:"16/9",flexShrink:0}}><img src={slide.bgImage} alt="" style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:`center ${50+(slide.imgOffsetY||0)}%`}}/></div>}
-      {slide.corpo&&<div style={TW.sub}>{widow(slide.corpo)}</div>}
-      {slide.punchline&&<div style={TW.quote}>{widow(slide.punchline)}</div>}
-      <div style={{flex:1}}/>
-      <div style={TW.foot}>{pg(idx,total)}</div>
+      {/* imagem cima */}
+      {img&&pos==="top"&&<div style={{marginBottom:10,borderRadius:10,overflow:"hidden",height:slide.imgBandH||100,position:"relative",zIndex:1}}>
+        <img src={img} alt="" style={bandImgStyle}/>
+      </div>}
+      <EditableText text={slide.titulo} destaque={slide.destaque} size={17} color="#0f1419" accent={C.purple} bold={true} field="titulo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{...TW.body,position:"relative",zIndex:1}}/>
+      {slide.corpo&&<EditableText text={slide.corpo} size={14} color="#0f1419" bold={false} lh={1.45} field="corpo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{...TW.sub,position:"relative",zIndex:1}}/>}
+      {slide.punchline&&<EditableText text={slide.punchline} size={13} color="#0f1419" bold={true} field="punchline" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} style={{...TW.quote,position:"relative",zIndex:1}}/>}
+      {/* imagem baixo */}
+      {img&&pos==="bottom"&&<div style={{marginTop:10,borderRadius:10,overflow:"hidden",height:slide.imgBandH||100,flexShrink:0,position:"relative",zIndex:1}}>
+        <img src={img} alt="" style={bandImgStyle}/>
+      </div>}
+      <div style={{flex:1,position:"relative",zIndex:1}}/>
+      <div style={{...TW.foot,position:"relative",zIndex:1}}>{pg(idx,total)}</div>
     </div>
   );
 }
@@ -888,7 +1076,7 @@ const St={
   slideTools:{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap"},
   uploadBtn:{background:"transparent",color:C.green,border:`1px solid ${C.green}`,borderRadius:7,padding:"5px 10px",fontFamily:MONO,fontSize:12,cursor:"pointer"},
   removeImg:{background:"transparent",color:C.dim,border:`1px solid ${C.line}`,borderRadius:7,padding:"5px 10px",fontFamily:MONO,fontSize:12,cursor:"pointer"},
-  posBtn:{border:`1px solid ${C.line}`,borderRadius:7,padding:"5px 10px",fontFamily:MONO,fontSize:12,cursor:"pointer"},
+  posBtn:{background:"transparent",color:C.dim,border:`1px solid ${C.line}`,borderRadius:7,padding:"5px 10px",fontFamily:MONO,fontSize:12,cursor:"pointer"},
   promptBox:{background:C.panel,border:`1px solid ${C.line}`,borderRadius:10,padding:11},
   promptHead:{fontSize:11,letterSpacing:"0.1em",color:C.dim,marginBottom:6,display:"flex",justifyContent:"space-between",alignItems:"center"},
   promptTxt:{fontSize:12,lineHeight:1.5,color:"rgba(255,255,255,0.85)"},
