@@ -689,7 +689,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
 
   if(lay===2)return(
     <div style={cardBase(light)}>
-      {img&&slide.imgMode!=="ilustracao"?<><img src={img} alt="" style={{...imgFull,objectPosition:`center ${50+off}%`}}/><div style={scrim}/></>:<Glows/>}
+      {img&&slide.imgMode!=="ilustracao"?<><img src={img} alt="" style={{...imgFull,objectPosition:`${50+offX}% ${50+off}%`}}/><div style={scrim}/></>:<Glows/>}
       {img&&slide.imgMode==="ilustracao"&&<img src={img} alt="" style={{position:"absolute",bottom:60,right:10,height:"55%",width:"auto",objectFit:"contain",filter:"drop-shadow(0 4px 20px rgba(0,0,0,0.6))",zIndex:1,pointerEvents:"none"}}/>}
       <div style={padCol}><div style={{flex:1}}/>{titleEl}<div style={{marginTop:10}}>{footEl}</div></div>
     </div>
@@ -733,7 +733,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
   // lay 0 — base
   return(
     <div style={cardBase(light)}>
-      {img?<><img src={img} alt="" style={{...imgFull,objectPosition:`center ${50+off}%`}}/><div style={scrim}/></>:null}
+      {img?<><img src={img} alt="" style={{...imgFull,objectPosition:`${50+offX}% ${50+off}%`}}/><div style={scrim}/></>:null}
       <div style={padCol}>
         <div style={{flex:1}}/>{titleEl}
         {corpoEl}
@@ -746,7 +746,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
 
 function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onCommit}){
   const light=eff==="light",accent=light?C.purple:C.green;
-  const pos=slide.imgPos||"top",img=slide.bgImage,off=slide.imgOffsetY||0;
+  const pos=slide.imgPos||"top",img=slide.bgImage,off=slide.imgOffsetY||0,offX=slide.imgOffsetX||0;
   const cc=light?"rgba(0,0,0,.65)":"rgba(255,255,255,.74)";
   const titleColor=light?C.black:C.white;
 
@@ -757,7 +757,7 @@ function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,o
 
   if(img&&pos==="bg")return(
     <div style={cardBase(light)}>
-      <img src={img} alt="" style={{...imgFull,opacity:light?0.15:0.28,objectPosition:`center ${50+off}%`}}/>
+      <img src={img} alt="" style={{...imgFull,opacity:light?0.15:0.28,objectPosition:`${50+offX}% ${50+off}%`}}/>
       {!light&&<Glows/>}
       <div style={padCol}>
         {titleEl}
