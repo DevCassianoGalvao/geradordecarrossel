@@ -200,7 +200,7 @@ export default function App(){
       educacional:"OBJETIVO EDUCACIONAL: fecha com lição e convite leve.",
       provocativo:"OBJETIVO PROVOCATIVO: último slide crava opinião que incomoda.",
       isca:"OBJETIVO ISCA: último slide pede 'comente PALAVRA pra receber [material]'. Retorne 'isca' com sugestão de material.",
-      lista:"OBJETIVO LISTA: estruture como lista numerada. Cada slide revela 1-2 itens.",
+      lista:"OBJETIVO LISTA NUMERADA: siga EXATAMENTE esta estrutura: (1) CAPA = gancho com o numero da lista no titulo (ex: '5 razoes pelas quais seu site perde paciente') — max 8 palavras, sem explicar, so provocar. (2) Slides de conteudo = cada um revela 1 item numerado da lista, com o numero no inicio do titulo (ex: '1. O paciente chegou de noite e...'), corpo com a cena concreta daquele item especifico, punchline que resume aquele item. (3) CTA = convite para conversa. NUNCA invente numeros. Mantenha coerencia com o angulo escolhido em todos os slides.",
       antes_depois:"OBJETIVO ANTES/DEPOIS: slides 2-3 mostram dor atual, slides 4-5 mostram resultado possível. Sem inventar métricas.",
       historia:"OBJETIVO HISTÓRIA: conte situação real. Capa apresenta problema, meio conta o que aconteceu, CTA convida conversa.",
     }[objetivo]||"";
