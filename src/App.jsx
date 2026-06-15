@@ -292,7 +292,7 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
       "TEMA: "+foco,
       "SLIDES: "+resumo,
       "PUBLICO: "+tipoNicho,
-      "REGRAS: primeira linha de impacto, 2-3 paragrafos curtos em primeira pessoa, CTA no final, linha separadora, 15-20 hashtags misturadas (nicho grande + especificas + #webdesign #marketingmedico #siteparaclinica #captacaodepacientes). Tom direto, humano. Retorne APENAS a legenda pronta."
+      "REGRAS: use emojis com moderacao (1-2 por paragrafo, nao em toda frase). Primeira linha de impacto sem emoji. 2-3 paragrafos curtos em primeira pessoa com emojis naturais que reforcem o ponto. CTA no final com emoji de acao (ex: arrow, direct). Linha separadora (---). 15-20 hashtags misturadas (nicho grande + especificas + #webdesign #marketingmedico #siteparaclinica #captacaodepacientes). Tom direto, humano, nao parece post corporativo. Retorne APENAS a legenda pronta."
     ].join(" / ");
     try{
       const out=await askClaude(prompt);
