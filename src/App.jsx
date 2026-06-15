@@ -312,50 +312,53 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
     const prev=idx;
     try{
       setIdx(slideIndex);
-      await new Promise(r=>setTimeout(r,150));
+      await new Promise(r=>setTimeout(r,180));
       const node=slideRef.current?.firstElementChild;
       if(!node)return null;
       await loadLib("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js","html2canvas");
-      // Fix object-fit for html2canvas: pre-size all imgs to their rendered box
-      const imgs=node.querySelectorAll("img");
-      const imgData=[];
+
+      // Convert each <img> into a <div> with background-image so html2canvas
+      // honors object-fit:cover and object-position correctly.
+      const imgs=Array.from(node.querySelectorAll("img"));
+      const swaps=[];
       imgs.forEach(img=>{
-        const r=img.getBoundingClientRect();
         const ps=window.getComputedStyle(img);
-        imgData.push({el:img,ow:img.style.width,oh:img.style.height,oop:img.style.objectPosition,oof:img.style.objectFit});
-        // Create canvas that replicates objectFit:cover
-        const cw=r.width,ch=r.height;
-        const iw=img.naturalWidth||cw,ih=img.naturalHeight||ch;
-        const scale=Math.max(cw/iw,ch/ih);
-        const sw=iw*scale,sh=ih*scale;
-        const ox=(parseFloat((ps.objectPosition||"50% 50%").split(" ")[0])||50)/100;
-        const oy=(parseFloat((ps.objectPosition||"50% 50%").split(" ")[1])||50)/100;
-        const cvs=document.createElement("canvas");
-        cvs.width=cw*3;cvs.height=ch*3;
-        const ctx=cvs.getContext("2d");
-        ctx.drawImage(img,(sw-cw)/2*(1-ox)*-2*3,(sh-ch)/2*(1-oy)*-2*3,sw*3,sh*3);
-        img.style.width=cw+"px";
-        img.style.height=ch+"px";
-        img.style.objectFit="none";
-        img.style.objectPosition="0 0";
-        img._h2cSrc=img.src;
-        img.src=cvs.toDataURL();
+        const div=document.createElement("div");
+        div.style.width=ps.width;
+        div.style.height=ps.height;
+        div.style.backgroundImage="url("+img.src+")";
+        div.style.backgroundSize=(ps.objectFit==="contain")?"contain":"cover";
+        div.style.backgroundPosition=ps.objectPosition||"center";
+        div.style.backgroundRepeat="no-repeat";
+        div.style.borderRadius=ps.borderRadius;
+        div.style.flexShrink=ps.flexShrink;
+        div.style.filter=ps.filter;
+        div.style.display=ps.display==="inline"?"block":ps.display;
+        img.parentNode.insertBefore(div,img);
+        img.style.display="none";
+        swaps.push({img,div});
       });
-      const canvas=await window.html2canvas(node,{
-        scale:3, useCORS:true, allowTaint:true, backgroundColor:null,
-        width:SLIDE_W, height:SLIDE_H, logging:false,
-        onclone:(doc)=>{
-          doc.querySelectorAll("img").forEach(img=>{img.crossOrigin="anonymous";});
-        }
-      });
-      // Restore
-      imgs.forEach((img,i)=>{
-        img.src=img._h2cSrc||img.src;
-        img.style.width=imgData[i].ow;img.style.height=imgData[i].oh;
-        img.style.objectFit=imgData[i].oof;img.style.objectPosition=imgData[i].oop;
-        delete img._h2cSrc;
-      });
-      return canvas.toDataURL("image/png");
+
+      // Remove rounded corners for Instagram (square export)
+      const origRadius=node.style.borderRadius;
+      const origShadow=node.style.boxShadow;
+      node.style.borderRadius="0";
+      node.style.boxShadow="none";
+
+      let dataUrl=null;
+      try{
+        const canvas=await window.html2canvas(node,{
+          scale:3, useCORS:true, allowTaint:true, backgroundColor:getComputedStyle(node).backgroundColor||"#000000",
+          width:SLIDE_W, height:SLIDE_H, logging:false
+        });
+        dataUrl=canvas.toDataURL("image/png");
+      }finally{
+        // Restore everything
+        node.style.borderRadius=origRadius;
+        node.style.boxShadow=origShadow;
+        swaps.forEach(({img,div})=>{img.style.display="";div.parentNode.removeChild(div);});
+      }
+      return dataUrl;
     }finally{
       setIdx(prev);
     }
@@ -508,7 +511,7 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
           <div style={{...St.stage,background:"#0d0d10"}}>
             {carregando==="carrossel"&&<div style={{...St.placeholder,color:"#00EF9E"}}>Montando o carrossel…</div>}
             {!slide&&carregando!=="carrossel"&&<div style={St.placeholder}>{ideias.length===0?"Passo 01: foco e gere ideias.":"Passo 02: escolha e confirme um ângulo."}</div>}
-            {slide&&<div ref={slideRef}><Slide slide={slide} estilo={estilo} idx={idx} total={slides.length} perfil={perfil} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={startEdit} onCommit={commitEdit}/></div>}
+            {slide&&<div ref={slideRef} data-cap="1"><Slide slide={slide} estilo={estilo} idx={idx} total={slides.length} perfil={perfil} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={startEdit} onCommit={commitEdit}/></div>}
           </div>
 
           {slides.length>0&&(<>
