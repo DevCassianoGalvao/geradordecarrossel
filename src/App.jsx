@@ -753,6 +753,50 @@ function TweetSlide({slide,idx,total,perfil,editField,editVal,setEditVal,onEdit,
   );
 }
 
+
+function TypoPanel({slide,idx,setSlides}){
+  const t=slide.typo||{ts:20,tw:700,bs:12,bw:400,blh:1.5,ps:12,pw:700};
+  const upd=(k,v)=>setSlides(p=>p.map((s,i)=>i===idx?{...s,typo:{...s.typo,[k]:v}}:s));
+  const row=(label,field,min,max,step,isWeight)=>(
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+      <span style={{fontSize:10,color:C.dim,width:90,flexShrink:0}}>{label}</span>
+      {isWeight
+        ?<div style={{display:"flex",gap:4}}>
+          {[400,500,700].map(w=><button key={w} onClick={()=>upd(field,w)} style={{background:t[field]===w?C.green:"transparent",color:t[field]===w?C.black:C.white,border:"1px solid "+(t[field]===w?C.green:C.line),borderRadius:6,padding:"3px 8px",fontFamily:MONO,fontSize:10,cursor:"pointer"}}>{w}</button>)}
+        </div>
+        :<><input type="range" min={min} max={max} step={step} value={t[field]} onChange={e=>upd(field,Number(e.target.value))} style={{flex:1,accentColor:C.green}}/><span style={{fontSize:10,color:C.white,minWidth:28}}>{t[field]}</span></>
+      }
+    </div>
+  );
+  return(
+    <div style={{background:C.panel,border:"1px solid "+C.line,borderRadius:11,padding:12}}>
+      <div style={{fontSize:10,letterSpacing:"0.1em",color:C.dim,marginBottom:10}}>TIPOGRAFIA · slide {idx+1}</div>
+      <div style={{fontSize:10,color:C.green,marginBottom:4}}>Titulo</div>
+      {row("Tamanho","ts",14,40,1,false)}
+      {row("Peso","tw",400,700,100,true)}
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+        <span style={{fontSize:10,color:C.dim,width:90,flexShrink:0}}>Destaque</span>
+        <input value={slide.destaque||""} onChange={e=>setSlides(p=>p.map((s,i)=>i===idx?{...s,destaque:e.target.value}:s))}
+          placeholder="palavra exata do titulo" style={{flex:1,background:C.panel2,border:"1px solid "+C.line,borderRadius:6,color:C.white,fontFamily:MONO,fontSize:11,padding:"4px 8px",outline:"none"}}/>
+        {slide.destaque&&<button onClick={()=>setSlides(p=>p.map((s,i)=>i===idx?{...s,destaque:""}:s))} style={{background:"transparent",color:C.dim,border:"1px solid "+C.line,borderRadius:5,padding:"2px 6px",fontSize:10,cursor:"pointer"}}>x</button>}
+      </div>
+      <div style={{fontSize:10,color:C.green,marginBottom:4,marginTop:6}}>Corpo</div>
+      {row("Tamanho","bs",10,22,1,false)}
+      {row("Peso","bw",400,700,100,true)}
+      {row("Line height","blh",1.2,2.2,0.05,false)}
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+        <span style={{fontSize:10,color:C.dim,width:90,flexShrink:0}}>Destaque</span>
+        <input value={slide.corpoDestaque||""} onChange={e=>setSlides(p=>p.map((s,i)=>i===idx?{...s,corpoDestaque:e.target.value}:s))}
+          placeholder="trecho exato do corpo" style={{flex:1,background:C.panel2,border:"1px solid "+C.line,borderRadius:6,color:C.white,fontFamily:MONO,fontSize:11,padding:"4px 8px",outline:"none"}}/>
+        {slide.corpoDestaque&&<button onClick={()=>setSlides(p=>p.map((s,i)=>i===idx?{...s,corpoDestaque:""}:s))} style={{background:"transparent",color:C.dim,border:"1px solid "+C.line,borderRadius:5,padding:"2px 6px",fontSize:10,cursor:"pointer"}}>x</button>}
+      </div>
+      <div style={{fontSize:10,color:C.green,marginBottom:4,marginTop:6}}>Punchline</div>
+      {row("Tamanho","ps",10,22,1,false)}
+      {row("Peso","pw",400,700,100,true)}
+    </div>
+  );
+}
+
 // ===== ESTILOS =====
 const St={
   root:{minHeight:"100vh",background:C.black,color:C.white,fontFamily:MONO,padding:"16px 20px 40px"},
