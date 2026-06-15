@@ -78,6 +78,20 @@ function sortidoEff(slide,idx){
 }
 function widow(s){if(!s)return s;const i=s.lastIndexOf(" ");return i>0?s.slice(0,i)+"\u00A0"+s.slice(i+1):s;}
 
+class ErrorBoundary extends React.Component {
+  constructor(props){super(props);this.state={error:null};}
+  static getDerivedStateFromError(e){return{error:e};}
+  render(){
+    if(this.state.error)return(
+      <div style={{padding:20,color:"#00EF9E",fontFamily:"monospace",background:"#000",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+        <div style={{fontSize:14,marginBottom:12}}>Erro encontrado — recarregue a pagina</div>
+        <div style={{fontSize:11,opacity:0.6,maxWidth:400,textAlign:"center"}}>{this.state.error.message}</div>
+        <button onClick={()=>window.location.reload()} style={{marginTop:16,background:"#00EF9E",color:"#000",border:"none",borderRadius:8,padding:"10px 20px",fontFamily:"monospace",cursor:"pointer"}}>Recarregar</button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
 const SENHA = "150771ca";
 
 function LoginGate({onLogin}){
@@ -288,19 +302,22 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
   }
 
   async function captureSlide(slideIndex){
-    // Temporarily navigate to slide, capture DOM, return to current
+    if(!slides[slideIndex])return null;
     const prev=idx;
-    setIdx(slideIndex);
-    await new Promise(r=>setTimeout(r,80)); // wait for render
-    const node=slideRef.current?.firstElementChild;
-    if(!node)return null;
-    await loadLib("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js","html2canvas");
-    const canvas=await window.html2canvas(node,{
-      scale:3, useCORS:true, allowTaint:true, backgroundColor:null,
-      width:SLIDE_W, height:SLIDE_H, logging:false
-    });
-    setIdx(prev);
-    return canvas.toDataURL("image/png");
+    try{
+      setIdx(slideIndex);
+      await new Promise(r=>setTimeout(r,120));
+      const node=slideRef.current?.firstElementChild;
+      if(!node)return null;
+      await loadLib("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js","html2canvas");
+      const canvas=await window.html2canvas(node,{
+        scale:3, useCORS:true, allowTaint:true, backgroundColor:null,
+        width:SLIDE_W, height:SLIDE_H, logging:false
+      });
+      return canvas.toDataURL("image/png");
+    }finally{
+      setIdx(prev);
+    }
   }
 
   async function exportarZip(){
@@ -447,8 +464,8 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
 
           {isca&&<div style={{background:"rgba(0,239,158,0.08)",border:`1px solid ${C.green}`,borderRadius:9,padding:"9px 13px",fontSize:12}}><b style={{color:C.green}}>Isca:</b> {isca}</div>}
 
-          <div style={St.stage}>
-            {carregando==="carrossel"&&<div style={St.placeholder}>Montando o carrossel…</div>}
+          <div style={{...St.stage,background:"#0d0d10"}}>
+            {carregando==="carrossel"&&<div style={{...St.placeholder,color:"#00EF9E"}}>Montando o carrossel…</div>}
             {!slide&&carregando!=="carrossel"&&<div style={St.placeholder}>{ideias.length===0?"Passo 01: foco e gere ideias.":"Passo 02: escolha e confirme um ângulo."}</div>}
             {slide&&<div ref={slideRef}><Slide slide={slide} estilo={estilo} idx={idx} total={slides.length} perfil={perfil} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={startEdit} onCommit={commitEdit}/></div>}
           </div>
