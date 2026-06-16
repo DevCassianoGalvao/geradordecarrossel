@@ -326,7 +326,7 @@ function AppContent(){
       const out=await askClaude(`Gere UM prompt de imagem (INGLÊS) para este slide.
 TÍTULO: ${s.titulo} | MENSAGEM: ${[s.corpo,s.punchline].filter(Boolean).join(" ")}
 ${personagem}CÂMERA OBRIGATÓRIA: ${angulo}. Ação do personagem representa o sentimento do texto.
-Varie: ${i%2===0?"interior, noturno":"ambiente clínico, luz natural"}.
+Ambiente: ${["clínica moderna, luz natural do dia","consultório premium, luz suave diurna","espaço de trabalho contemporâneo, hora dourada"][i%3]}. NÃO use iluminação noturna a menos que o texto peça explicitamente.
 Estética: ${STYLE_TPL[imgStyle]}. no text, no watermark, no logo. Máx 40 palavras.
 Apenas a string do prompt, sem aspas, sem markdown.`);
       setSlides(p=>p.map((sl,j)=>j===i?{...sl,image_prompt:out.trim().replace(/^"+|"+$/g,"")}:sl));
