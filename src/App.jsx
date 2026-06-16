@@ -689,15 +689,26 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
                   capa ({(slide.coverLayout||0)+1}/5)
                 </button>
               )}
-              {/* Escuridão — capa full-bleed (lay 0/2) e modo fundo */}
+              {/* Degradê — capa full-bleed (lay 0/2) e modo fundo */}
               {slide.bgImage&&(slide.imgPos==="bg"||(slide.tipo==="capa"&&((slide.coverLayout||0)===0||(slide.coverLayout||0)===2)))&&(
                 <div style={{display:"flex",alignItems:"center",gap:4,background:C.panel2,borderRadius:8,padding:"4px 8px"}}>
-                  <span style={{fontSize:9,color:C.dim,minWidth:32}}>Escur.</span>
+                  <span style={{fontSize:9,color:C.dim,minWidth:36}}>Degradê</span>
                   <input type="range" min="0" max="1" step="0.05" value={slide.imgDark??1}
                     onChange={e=>setSlides(p=>p.map((s,i)=>i===idx?{...s,imgDark:Number(e.target.value)}:s))}
                     style={{width:70,accentColor:C.purple}}/>
                   <span style={{fontSize:9,color:(slide.imgDark??1)===1?C.dim:C.green,minWidth:26}}>{Math.round((slide.imgDark??1)*100)}%</span>
                   {(slide.imgDark??1)<1&&<button onClick={()=>setSlides(p=>p.map((s,i)=>i===idx?{...s,imgDark:1}:s))} style={{background:"transparent",border:"none",color:C.dim,fontSize:9,cursor:"pointer",padding:0}}>↺</button>}
+                </div>
+              )}
+              {/* Opacidade da imagem — todos os slides com imagem */}
+              {slide.bgImage&&(
+                <div style={{display:"flex",alignItems:"center",gap:4,background:C.panel2,borderRadius:8,padding:"4px 8px"}}>
+                  <span style={{fontSize:9,color:C.dim,minWidth:36}}>Opac.</span>
+                  <input type="range" min="0.05" max="1" step="0.05" value={slide.imgOpacity??1}
+                    onChange={e=>setSlides(p=>p.map((s,i)=>i===idx?{...s,imgOpacity:Number(e.target.value)}:s))}
+                    style={{width:70,accentColor:C.green}}/>
+                  <span style={{fontSize:9,color:(slide.imgOpacity??1)===1?C.dim:C.green,minWidth:26}}>{Math.round((slide.imgOpacity??1)*100)}%</span>
+                  {(slide.imgOpacity??1)<1&&<button onClick={()=>setSlides(p=>p.map((s,i)=>i===idx?{...s,imgOpacity:1}:s))} style={{background:"transparent",border:"none",color:C.dim,fontSize:9,cursor:"pointer",padding:0}}>↺</button>}
                 </div>
               )}
               {/* Altura da faixa de imagem — conteúdo + capas com band (lay 3/4) */}
@@ -807,10 +818,10 @@ function EditablePunch({text,accent,light,size=12,weight=700,field,slideIdx,edit
 function PunchEl({txt,accent,light}){
   return<div style={{borderLeft:`3px solid ${accent}`,paddingLeft:11,fontSize:14,fontWeight:700,lineHeight:1.4,color:light?C.black:C.white,marginBottom:12,textWrap:"pretty"}}>{widow(txt)}</div>;
 }
-function BandEl({src,h,offsetY,offsetX,scale,mode}){
+function BandEl({src,h,offsetY,offsetX,scale,opacity,mode}){
   if(mode==="ilustracao") return(
     <div style={{display:"flex",justifyContent:"center",height:h||120,flexShrink:0}}>
-      <img src={src} alt="" style={{height:"100%",width:"auto",objectFit:"contain",filter:"drop-shadow(0 4px 16px rgba(0,0,0,0.5))"}}/>
+      <img src={src} alt="" style={{height:"100%",width:"auto",objectFit:"contain",filter:"drop-shadow(0 4px 16px rgba(0,0,0,0.5))",opacity:opacity??1}}/>
     </div>
   );
   const ms=Math.max(1.2,scale||1);
@@ -818,7 +829,7 @@ function BandEl({src,h,offsetY,offsetX,scale,mode}){
   return(
     <div style={{borderRadius:9,overflow:"hidden",height:h||90,flexShrink:0,position:"relative"}}>
       <img src={src} alt="" style={{
-        position:"absolute",
+        position:"absolute",opacity:opacity??1,
         width:`${ms*100}%`,height:`${ms*100}%`,
         objectFit:"cover",
         top:`calc(${base} + ${-(offsetY||0)}px)`,
@@ -866,7 +877,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
 
   if(lay===2)return(
     <div style={cardBase(light)}>
-      {img&&slide.imgMode!=="ilustracao"?<><ImgFullBleed src={img} off={off} offX={offX} scale={slide.imgScale}/><div style={scrimDyn}/></>:<BgDecor pattern={bgPattern} light={light}/>}
+      {img&&slide.imgMode!=="ilustracao"?<><ImgFullBleed src={img} off={off} offX={offX} scale={slide.imgScale} opacity={slide.imgOpacity}/><div style={scrimDyn}/></>:<BgDecor pattern={bgPattern} light={light}/>}
       {img&&slide.imgMode==="ilustracao"&&<img src={img} alt="" style={{position:"absolute",bottom:60,right:10,height:"55%",width:"auto",objectFit:"contain",filter:"drop-shadow(0 4px 20px rgba(0,0,0,0.6))",zIndex:1,pointerEvents:"none"}}/>}
       <div style={padCol}><div style={{flex:1}}/>{titleEl}<div style={{marginTop:10}}>{footEl}</div></div>
     </div>
@@ -885,7 +896,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
     <div style={cardBase(light)}>
       {<BgDecor pattern={bgPattern} light={light}/>}
       <div style={{...padCol,justifyContent:"space-between"}}>
-        {img&&<BandEl src={img} h={slide.imgBandH||150} offsetY={off} offsetX={slide.imgOffsetX||0} scale={slide.imgScale} mode={slide.imgMode||"foto"}/>}
+        {img&&<BandEl src={img} h={slide.imgBandH||150} offsetY={off} offsetX={slide.imgOffsetX||0} scale={slide.imgScale} opacity={slide.imgOpacity} mode={slide.imgMode||"foto"}/>}
         <div style={{display:"flex",flexDirection:"column",gap:10,flex:1,justifyContent:"center",paddingTop:img?12:0}}>
           {titleEl}
           {corpoEl}
@@ -902,7 +913,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
           {titleEl}
           {corpoEl}
         </div>
-        {img&&<><BandEl src={img} h={slide.imgBandH||150} offsetY={off} offsetX={slide.imgOffsetX||0} scale={slide.imgScale} mode={slide.imgMode||"foto"}/><div style={{height:8}}/></>}
+        {img&&<><BandEl src={img} h={slide.imgBandH||150} offsetY={off} offsetX={slide.imgOffsetX||0} scale={slide.imgScale} opacity={slide.imgOpacity} mode={slide.imgMode||"foto"}/><div style={{height:8}}/></>}
         {footEl}
       </div>
     </div>
@@ -910,7 +921,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
   // lay 0 — base
   return(
     <div style={cardBase(light)}>
-      {img?<><ImgFullBleed src={img} off={off} offX={offX} scale={slide.imgScale}/><div style={scrimDyn}/></>:null}
+      {img?<><ImgFullBleed src={img} off={off} offX={offX} scale={slide.imgScale} opacity={slide.imgOpacity}/><div style={scrimDyn}/></>:null}
       <div style={padCol}>
         <div style={{flex:1}}/>{titleEl}
         {corpoEl}
@@ -934,7 +945,7 @@ function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,o
 
   if(img&&pos==="bg")return(
     <div style={cardBase(light)}>
-      <ImgFullBleed src={img} off={off} offX={offX} scale={slide.imgScale} opacity={(slide.imgDark??1)*(light?0.15:0.28)}/>
+      <ImgFullBleed src={img} off={off} offX={offX} scale={slide.imgScale} opacity={(slide.imgOpacity??1)*(slide.imgDark??1)*(light?0.15:0.28)}/>
       {<BgDecor pattern={bgPattern} light={light}/>}
       <div style={padCol}>
         {titleEl}
@@ -956,10 +967,10 @@ function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,o
           {slide.icon&&<Icon name={slide.icon} size={13} color={accent} style={{flexShrink:0,opacity:.8}}/>}
           <EditableText text={slide.label||(slide.tipo==="cta"?"O CONVITE":"O DIAGNÓSTICO")} size={9} color={light?"rgba(0,0,0,.4)":C.dim} accent={accent} field="label" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit} bold={false} lh={1} style={{letterSpacing:"0.11em",textTransform:"uppercase"}}/>
         </div>
-        {hasImg&&pos==="top"&&<div style={{marginBottom:12}}><BandEl src={img} h={slide.imgBandH||90} offsetY={off} offsetX={offX} scale={slide.imgScale} mode={slide.imgMode||"foto"}/></div>}
+        {hasImg&&pos==="top"&&<div style={{marginBottom:12}}><BandEl src={img} h={slide.imgBandH||90} offsetY={off} offsetX={offX} scale={slide.imgScale} opacity={slide.imgOpacity} mode={slide.imgMode||"foto"}/></div>}
         {titleEl}
         {slide.corpo?corpoEl2:(!hasContent&&<div style={{flex:1}}/>)}
-        {hasImg&&pos==="bottom"&&<div style={{marginTop:12}}><BandEl src={img} h={slide.imgBandH||(slide.imgMode==="ilustracao"?130:90)} offsetY={off} offsetX={offX} scale={slide.imgScale} mode={slide.imgMode||"foto"}/></div>}
+        {hasImg&&pos==="bottom"&&<div style={{marginTop:12}}><BandEl src={img} h={slide.imgBandH||(slide.imgMode==="ilustracao"?130:90)} offsetY={off} offsetX={offX} scale={slide.imgScale} opacity={slide.imgOpacity} mode={slide.imgMode||"foto"}/></div>}
         <div style={{flex:1}}/>
         {punchEl2}
         <Foot light={light} accent={accent} label={pg(idx,total)}/>
