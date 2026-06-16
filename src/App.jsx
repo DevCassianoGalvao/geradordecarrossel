@@ -689,6 +689,17 @@ Apenas a string do prompt, sem aspas, sem markdown.`);
                   capa ({(slide.coverLayout||0)+1}/5)
                 </button>
               )}
+              {/* Escuridão — capa full-bleed (lay 0/2) e modo fundo */}
+              {slide.bgImage&&(slide.imgPos==="bg"||(slide.tipo==="capa"&&((slide.coverLayout||0)===0||(slide.coverLayout||0)===2)))&&(
+                <div style={{display:"flex",alignItems:"center",gap:4,background:C.panel2,borderRadius:8,padding:"4px 8px"}}>
+                  <span style={{fontSize:9,color:C.dim,minWidth:32}}>Escur.</span>
+                  <input type="range" min="0" max="1" step="0.05" value={slide.imgDark??1}
+                    onChange={e=>setSlides(p=>p.map((s,i)=>i===idx?{...s,imgDark:Number(e.target.value)}:s))}
+                    style={{width:70,accentColor:C.purple}}/>
+                  <span style={{fontSize:9,color:(slide.imgDark??1)===1?C.dim:C.green,minWidth:26}}>{Math.round((slide.imgDark??1)*100)}%</span>
+                  {(slide.imgDark??1)<1&&<button onClick={()=>setSlides(p=>p.map((s,i)=>i===idx?{...s,imgDark:1}:s))} style={{background:"transparent",border:"none",color:C.dim,fontSize:9,cursor:"pointer",padding:0}}>↺</button>}
+                </div>
+              )}
               {/* Altura da faixa de imagem — conteúdo + capas com band (lay 3/4) */}
               {slide.bgImage&&(slide.tipo!=="capa"||(slide.coverLayout===3||slide.coverLayout===4))&&(
                 <div style={{display:"flex",alignItems:"center",gap:4,background:C.panel2,borderRadius:8,padding:"4px 8px"}}>
@@ -845,6 +856,8 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
   const lay=slide.coverLayout||0,img=slide.bgImage,off=slide.imgOffsetY||0,offX=slide.imgOffsetX||0;
   const titleColor=img&&(lay===0||lay===2)?C.white:fg;
   const titleAccent=img&&(lay===0||lay===2)?C.green:accent;
+  const dk=slide.imgDark??1;
+  const scrimDyn={position:"absolute",inset:0,background:`linear-gradient(180deg,rgba(0,0,0,${(0.08*dk).toFixed(2)}),rgba(0,0,0,${(0.85*dk).toFixed(2)}))`,zIndex:1};
 
   const tp=slide.typo||{ts:28,tw:700,bs:12,bw:400,blh:1.5,ps:12,pw:700};
   const titleEl=<EditableText text={slide.titulo} destaque={slide.destaque} size={tp.ts} color={titleColor} accent={titleAccent} field="titulo" slideIdx={idx} editField={editField} editVal={editVal} setEditVal={setEditVal} onEdit={onEdit} onCommit={onCommit}/>;
@@ -853,7 +866,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
 
   if(lay===2)return(
     <div style={cardBase(light)}>
-      {img&&slide.imgMode!=="ilustracao"?<><ImgFullBleed src={img} off={off} offX={offX} scale={slide.imgScale}/><div style={scrim}/></>:<BgDecor pattern={bgPattern} light={light}/>}
+      {img&&slide.imgMode!=="ilustracao"?<><ImgFullBleed src={img} off={off} offX={offX} scale={slide.imgScale}/><div style={scrimDyn}/></>:<BgDecor pattern={bgPattern} light={light}/>}
       {img&&slide.imgMode==="ilustracao"&&<img src={img} alt="" style={{position:"absolute",bottom:60,right:10,height:"55%",width:"auto",objectFit:"contain",filter:"drop-shadow(0 4px 20px rgba(0,0,0,0.6))",zIndex:1,pointerEvents:"none"}}/>}
       <div style={padCol}><div style={{flex:1}}/>{titleEl}<div style={{marginTop:10}}>{footEl}</div></div>
     </div>
@@ -897,7 +910,7 @@ function CoverSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,onC
   // lay 0 — base
   return(
     <div style={cardBase(light)}>
-      {img?<><ImgFullBleed src={img} off={off} offX={offX} scale={slide.imgScale}/><div style={scrim}/></>:null}
+      {img?<><ImgFullBleed src={img} off={off} offX={offX} scale={slide.imgScale}/><div style={scrimDyn}/></>:null}
       <div style={padCol}>
         <div style={{flex:1}}/>{titleEl}
         {corpoEl}
@@ -921,7 +934,7 @@ function ContentSlide({slide,eff,idx,total,editField,editVal,setEditVal,onEdit,o
 
   if(img&&pos==="bg")return(
     <div style={cardBase(light)}>
-      <ImgFullBleed src={img} off={off} offX={offX} scale={slide.imgScale} opacity={light?0.15:0.28}/>
+      <ImgFullBleed src={img} off={off} offX={offX} scale={slide.imgScale} opacity={(slide.imgDark??1)*(light?0.15:0.28)}/>
       {<BgDecor pattern={bgPattern} light={light}/>}
       <div style={padCol}>
         {titleEl}
